@@ -11,6 +11,6 @@ namespace ppc2cpp {
 */
 class NinProgramLoader : public ProgramLoader {
 public:
-  NinProgramLoader(const std::vector<std::filesystem::path>& files);
+  NinProgramLoader(const ::google::protobuf::RepeatedPtrField<persistence::ProgramLoaderBinary>& binaryProtos);
 };
 }

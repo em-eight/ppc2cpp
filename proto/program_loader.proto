@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package persistence;
+
+message ProgramLoaderBinary {
+    string fileName = 1;
+    bytes data = 2;
+}
+
+// What program loader the project uses
+enum ProgramLoaderType {
+    LOADER_UNSPECIFIED = 0;
+    LOADER_RVL = 1;
+}
+
+// Program loader persistence
+message ProgramLoader {
+    int32 formatVersion = 1;
+
+    ProgramLoaderType loaderType = 2;
+    repeated ProgramLoaderBinary binaries = 3;
+}

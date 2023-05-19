@@ -8,6 +8,8 @@
 
 #include "BinarySection.hpp"
 
+#include "program_loader.pb.h"
+
 namespace ppc2cpp {
 class Binary {
 public:
@@ -27,6 +29,7 @@ public:
     
     return false;
   } 
+
   // try to get section by VMA
   virtual std::optional<BinarySectionPtr> getSectionByAddress(uint32_t vma) const {
     if (!hasLoadInfo()) return std::nullopt;
@@ -38,15 +41,18 @@ public:
     return std::nullopt;
 
   }
+
   virtual std::optional<BinarySectionPtr> getSectionIdxByName(std::string name) const {
     const uint32_t numSections = this->sections.size();
     for (const auto & sec : this->sections)
       if (sec->getName() == name) return sec;
     return std::nullopt;
   }
+
   virtual std::optional<uint8_t*> getBufferAtOffset(const BinarySection& section, uint32_t offset) const {
     return section.getBufferAtOffset(offset);
   }
+
   virtual std::optional<uint8_t*> getBufferAtAddress(uint32_t vma) const {
     if (!hasLoadInfo()) return std::nullopt;
     for (const auto& sec : this->sections) {
@@ -56,7 +62,17 @@ public:
     return std::nullopt;
   }
 
+  // original binary filename
+  std::string name;
+  // buffer to file data
+  uint8_t* data;
+  // size of file in bytes
+  uint32_t size;
+  // sections/segments of a binary
   std::vector<std::shared_ptr<BinarySection>> sections;
+
+  // proto persistence
+  void toProto(persistence::ProgramLoaderBinary*) const;
 };
 typedef std::shared_ptr<Binary> BinaryPtr;
 }

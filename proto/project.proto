@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package persistence;
+
+import "program_loader.proto";
+
+// The top level persistence binary.
+// Version control is not yet supported, but if/once it does, this message represents one version of a project
+message Project {
+    // version of this persistence format
+    int32 formatVersion = 1;
+
+    string projectName = 2;
+    // version of this project
+    int32 projectVersion = 3;
+
+    ProgramLoader program_loader = 4;
+}

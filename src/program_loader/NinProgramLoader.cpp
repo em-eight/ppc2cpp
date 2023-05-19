@@ -9,22 +9,20 @@
 #include "ninutils/dol.hpp"
 
 namespace ppc2cpp {
-NinProgramLoader::NinProgramLoader(const std::vector<std::filesystem::path>& files) {
-  for (auto& file : files) {
-    std::ifstream filestrm(file.c_str(), std::ios::binary | std::ios::in | std::ios::ate);
-    std::streamsize size = filestrm.tellg();
-    filestrm.seekg(0, std::ios::beg);
-    std::vector<char> buffer(size);
-    filestrm.read(buffer.data(), size);
+NinProgramLoader::NinProgramLoader(const ::google::protobuf::RepeatedPtrField<persistence::ProgramLoaderBinary>& binaryProtos) {
+  for (const auto& binaryProto : binaryProtos) {
+    std::string filename = binaryProto.filename();
+    std::string data = binaryProto.data();
+    std::string file_extension = filename.substr(filename.find_last_of("."));
 
-    if (file.extension() == ".dol") {
-      std::shared_ptr<ninutils::Dol> _dolptr = std::make_shared<ninutils::Dol>((uint8_t*) buffer.data(), size);
-      this->binaries.push_back(std::make_shared<Dol>(_dolptr));
-    } else if (file.extension() == ".rel") {
-      std::shared_ptr<ninutils::Rel> _relptr = std::make_shared<ninutils::Rel>((uint8_t*) buffer.data(), size);
-      this->binaries.push_back(std::make_shared<Rel>(_relptr));
+    if (file_extension == ".dol") {
+      std::shared_ptr<ninutils::Dol> _dolptr = std::make_shared<ninutils::Dol>((uint8_t*) data.c_str(), data.size());
+      this->binaries.emplace_back(std::make_shared<Dol>(filename, _dolptr));
+    } else if (file_extension == ".rel") {
+      std::shared_ptr<ninutils::Rel> _relptr = std::make_shared<ninutils::Rel>((uint8_t*) data.c_str(), data.size());
+      this->binaries.emplace_back(std::make_shared<Rel>(filename, _relptr));
     } else {
-      throw FileTypeException("Unknown extension " + file.extension().string());
+      throw FileTypeException("Unknown extension " + file_extension);
     }
   }
 }

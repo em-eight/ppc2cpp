@@ -4,6 +4,8 @@
 #include <optional>
 #include <cstdint>
 
+#include "program_loader.pb.h"
+
 namespace ppc2cpp {
 /**
  * @brief Represents a loadable section/segment of a binary

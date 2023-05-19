@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "ppc2cpp/program_loader/NinProgramLoader.hpp"
+#include "ppc2cpp/model/Project.hpp"
 
 using namespace ppc2cpp;
 
@@ -11,8 +12,15 @@ int main(int argc, char** argv) {
     files.emplace_back(argv[i]);
   }
   
-  NinProgramLoader ploader(files);
-  for (const auto& binary : ploader.binaries) {
+  //NinProgramLoader ploader(files);
+  ProjectCreationOptions options;
+  options.projectName = "test_project";
+  options.programLoaderType = persistence::LOADER_RVL;
+  options.inputFiles = files;
+  options.projectFile= "./test.ppc2cpp";
+  Project testProject = Project::createProject(options);
+
+  for (const auto& binary : testProject.programLoader->binaries) {
     if (binary->isExcecutable()) continue; // skip DOL
 
     for (BinarySectionPtr sectionPtr : binary->sections) {
