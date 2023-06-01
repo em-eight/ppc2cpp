@@ -22,7 +22,8 @@ Project Project::createProject(const ProjectCreationOptions& options) {
     auto* binaryProto = programLoader.add_binaries();
     binaryProto->set_filename(inputFile.filename());
 
-    std::ifstream fstream(inputFile.c_str(), std::ios::binary | std::ios::in);
+    std::ifstream fstream(inputFile, std::ios::binary | std::ios::in);
+    if (!fstream.is_open()) throw std::runtime_error("Input file " + inputFile.string() + " was not found");
     std::stringstream sstream;
     sstream << fstream.rdbuf();
     binaryProto->set_data(sstream.str());

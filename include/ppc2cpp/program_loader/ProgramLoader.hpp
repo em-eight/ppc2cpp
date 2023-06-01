@@ -21,8 +21,15 @@ class ProgramLoader {
 public:
   virtual ~ProgramLoader() { }
   std::vector<BinaryPtr> binaries;
-  //virtual std::optional<uint8_t*> getBufferAtOffset(uint32_t moduleId, uint32_t sectionIdx, uint32_t offset) = 0;
-  //virtual std::optional<uint8_t*> getBufferAtAddress(uint32_t vma) = 0;
+
+  // get a location by binary name, section name and offset
+  virtual std::optional<ProgramLocation> getLocation(const std::string& binaryName, const std::string& sectionName, uint32_t offset);
+  virtual std::optional<uint8_t*> getBufferAtLocation(const ProgramLocation&);
+  virtual std::optional<ProgramLocation> getReferenceAtLocation(const ProgramLocation&) = 0;
+  // 
+  virtual std::optional<ProgramLocation> resolveTarget(const ProgramLocation& pc, int32_t value, bool isAbsolute);
+  // get location of virtual memory address within the program's binaries, if it exists 
+  virtual std::optional<ProgramLocation> resolveVMA(uint32_t vma);
 
   // protobuf persistence
   persistence::ProgramLoaderType loaderType;

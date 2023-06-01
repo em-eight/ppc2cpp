@@ -18,4 +18,5 @@ public:
 private:
   std::shared_ptr<ninutils::Dol> _dolPtr;
 };
+typedef std::shared_ptr<Dol> DolPtr;
 }

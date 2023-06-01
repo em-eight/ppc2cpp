@@ -12,7 +12,6 @@ int main(int argc, char** argv) {
     files.emplace_back(argv[i]);
   }
   
-  //NinProgramLoader ploader(files);
   ProjectCreationOptions options;
   options.projectName = "test_project";
   options.programLoaderType = persistence::LOADER_RVL;
@@ -24,6 +23,7 @@ int main(int argc, char** argv) {
     if (binary->isExcecutable()) continue; // skip DOL
 
     for (BinarySectionPtr sectionPtr : binary->sections) {
+      if (sectionPtr->type == BinarySection::SECTION_TYPE_NOLOAD) continue;
       std::cout << sectionPtr->getName() << std::endl;
       if (sectionPtr->getType() == BinarySection::SECTION_TYPE_TEXT) {
         uint8_t* buffer = sectionPtr->getBuffer();

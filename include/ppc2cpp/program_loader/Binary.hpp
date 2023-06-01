@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "BinarySection.hpp"
+#include "ppc2cpp/model/ProgramLocation.hpp"
 
 #include "program_loader.pb.h"
 
@@ -49,6 +50,10 @@ public:
     return std::nullopt;
   }
 
+  virtual std::optional<uint8_t*> getBufferAtLocation(const BinaryLocation& location) const {
+    return sections[location.section_idx]->getBufferAtOffset(location.section_offset);
+  }
+
   virtual std::optional<uint8_t*> getBufferAtOffset(const BinarySection& section, uint32_t offset) const {
     return section.getBufferAtOffset(offset);
   }
@@ -61,6 +66,9 @@ public:
     }
     return std::nullopt;
   }
+
+  // get location of virtual memory address within the program's binaries, if it exists 
+  virtual std::optional<BinaryLocation> resolveVMA(uint32_t vma);
 
   // original binary filename
   std::string name;

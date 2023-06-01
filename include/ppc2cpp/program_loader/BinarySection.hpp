@@ -13,6 +13,7 @@ namespace ppc2cpp {
 class BinarySection {
 public:
   enum Type {
+    SECTION_TYPE_NOLOAD, // Section not loaded (non PT_LOAD). The decompiler will basically ignore these
     SECTION_TYPE_TEXT,
     SECTION_TYPE_DATA,
     SECTION_TYPE_BSS
@@ -36,7 +37,6 @@ public:
   virtual std::optional<uint8_t*> getBufferAtOffset(uint32_t offset) const = 0;
   virtual std::optional<uint8_t*> getBufferAtAddress(uint32_t vma) const = 0;
 
-protected:
   std::string name;
   uint32_t offset;
   uint32_t length;

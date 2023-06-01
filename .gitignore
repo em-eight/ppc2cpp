@@ -1,0 +1,12 @@
+// build
+build
+
+// IDE
+.vscode
+
+// manually added test binaries
+test/binaries
+
+// proto generated files
+proto/*.pb.cc
+proto/*.pb.h

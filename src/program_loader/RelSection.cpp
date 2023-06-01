@@ -6,7 +6,7 @@ RelSection::RelSection(std::shared_ptr<ninutils::Rel> relPtr, ninutils::RelSecti
   this->name = relsection.name;
   this->offset = relsection.offset;
   this->length = relsection.length;
-  this->type = relsection.exec ? SECTION_TYPE_TEXT : (relsection.isBss() ? SECTION_TYPE_BSS : SECTION_TYPE_DATA);
+  this->type = this->length <= 0 ? SECTION_TYPE_NOLOAD : (relsection.exec ? SECTION_TYPE_TEXT : (relsection.isBss() ? SECTION_TYPE_BSS : SECTION_TYPE_DATA));
 }
 
 std::optional<uint8_t*> RelSection::getBufferAtOffset(uint32_t offset) const {
