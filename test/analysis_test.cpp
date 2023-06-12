@@ -5,8 +5,13 @@
 
 #include <gtest/gtest.h>
 
+#include "ppcdisasm/ppc-dis.hpp"
+
+#include "ppc2cpp/common/endian.h"
 #include "ppc2cpp/model/Project.hpp"
 #include "ppc2cpp/control_flow/ControlFlowAnalysis.hpp"
+#include "ppc2cpp/data_flow/DataFlowAnalysis.hpp"
+#include "ppc2cpp/data_flow/FlowContext.hpp"
 
 #include "test_helper.h"
 
@@ -39,4 +44,55 @@ TEST(ControlFlowAnalysisTest, kartActionCalc) {
   for (const auto& block : expectedBlocks) {
     EXPECT_BLOCK(cfg, block);
   }
+}
+
+void printNodeRecurse(ProgramLoaderPtr programLoader, const Function& func, VarnodePtr it) {
+  if (it->inputs.size() != 0) {
+    std::cout << it->label << ": ";
+    if (OperandnodePtr operandIn = dynamic_pointer_cast<Operandnode>(it)) {
+      // TODO: create assembly member to Function and create Disassembly analyzer
+      uint32_t* funcPtr = (uint32_t*) programLoader->getBufferAtLocation(func.location).value();
+      const uint32_t insn = be32(*(funcPtr + operandIn->index));
+      const struct powerpc_opcode* opcode = ppcdisasm::lookup_powerpc(insn, ppcdisasm::ppc_750cl_dialect);
+      std::cout << opcode->name;
+    } else if (PhinodePtr operandIn = dynamic_pointer_cast<Phinode>(it)) {
+      std::cout << "PHI";
+    }
+
+    std::cout << "(";
+    for (const auto& in : it->inputs) {
+      std::cout << in->label << ", ";
+    }
+    std::cout << ")" << std::endl;
+    for (const auto& in : it->inputs) {
+      printNodeRecurse(programLoader, func, in);
+    }
+  }
+
+}
+
+TEST(DataFlowAnalysisTest, kartActionCalc) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  // mkw binaries. TODO: test on more convenient binaries
+  vector<filesystem::path> files {test_path / "main.dol", test_path / "StaticR.rel"};
+
+  ProjectCreationOptions options;
+  options.projectName = "test_project";
+  options.programLoaderType = persistence::LOADER_RVL;
+  options.inputFiles = files;
+  options.projectFile= "./test.ppc2cpp";
+  Project testProject = Project::createProject(options);
+
+  Function quatmul(testProject.programLoader->getLocation("main.dol", ".text2", 0x8023a540-0x800072c0).value(), 0x8023a5c4-0x8023a540, "quatmul");
+  ControlFlowAnalysis cfa(testProject.programLoader);
+  cfa.functionCFA(quatmul);
+  
+  DataFlowAnalysis dfa(testProject.programLoader);
+  dfa.functionDFA(quatmul);
+  FlowContext& flowContext = quatmul.dfg.blockContexts[0];
+  VarnodePtr outX = flowContext.fprs[0][0];
+
+  std::cout << "f0 backwards flow" << std::endl;
+  printNodeRecurse(testProject.programLoader, quatmul, outX);
+  EXPECT_FALSE(true);
 }
