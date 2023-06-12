@@ -11,7 +11,13 @@ namespace ppc2cpp {
 */
 class DataFlowGraph {
 public:
-  //std::vector<VarnodePtr> nodes;
+  /**
+   * All of the variables that are "used"
+   * - Stores
+   * - branch conditions of basic blocks
+   * - return values of exit blocks
+  */
+  std::vector<SinknodePtr> sinks;
   // the output machine state for each basic block
   std::vector<ppc2cpp::FlowContext> blockContexts;
 };

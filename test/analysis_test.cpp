@@ -7,6 +7,8 @@
 
 #include "ppcdisasm/ppc-dis.hpp"
 
+#include "ppc2cpp/data_flow/DfgVisualizer.hpp"
+
 #include "ppc2cpp/common/endian.h"
 #include "ppc2cpp/model/Project.hpp"
 #include "ppc2cpp/control_flow/ControlFlowAnalysis.hpp"
@@ -94,5 +96,6 @@ TEST(DataFlowAnalysisTest, kartActionCalc) {
 
   std::cout << "f0 backwards flow" << std::endl;
   printNodeRecurse(testProject.programLoader, quatmul, outX);
+  outputDfgDot(std::cout, testProject.programLoader, quatmul);
   EXPECT_FALSE(true);
 }

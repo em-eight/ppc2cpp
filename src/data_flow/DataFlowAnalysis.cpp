@@ -41,12 +41,12 @@ void DataFlowAnalysis::functionDFA(Function& func, uint32_t blockIdx) {
       int64_t value = operand_value_powerpc (operand, insn, dialect_raw);
 
       if (isImmediate(operand->flags, value)) {
-        VarnodePtr opVar = std::make_shared<Operandnode>(pc, i, false);
+        VarnodePtr opVar = std::make_shared<Immediatenode>(pc, insnUD.inputs[i]);
         insnInputs.push_back(opVar);
       } else { // register
         std::vector<VarnodePtr> opVars = flowContext.getDefinition(operand, value);
         if (opVars.empty()) { // register undefined, create new definition
-          VarnodePtr opVar = std::make_shared<Operandnode>(pc, i, false);
+          VarnodePtr opVar = std::make_shared<InputRegnode>(pc, insnUD.inputs[i]);
           insnInputs.push_back(opVar);
         } else if (opVars.size() == 1) {
           insnInputs.push_back(opVars[0]);
@@ -61,7 +61,7 @@ void DataFlowAnalysis::functionDFA(Function& func, uint32_t blockIdx) {
       operand = powerpc_operands + insnUD.outputs[i];
       int64_t value = operand_value_powerpc (operand, insn, dialect_raw);
           
-      VarnodePtr opVar = std::make_shared<Operandnode>(pc, i, true);
+      VarnodePtr opVar = std::make_shared<Resultnode>(pc, insnUD.outputs[i]);
       insnOutputs.push_back(opVar);
       flowContext.setDefinition(operand, value, opVar);
     }
@@ -69,6 +69,13 @@ void DataFlowAnalysis::functionDFA(Function& func, uint32_t blockIdx) {
 
     for (VarnodePtr output : insnOutputs) {
       output->inputs = insnInputs;
+    }
+
+    // keep track of sinks
+    if (storeInsn.contains(opcode->opcode)) {
+      SinknodePtr sinkVar = std::make_shared<Sinknode>(pc);
+      sinkVar->inputs = insnInputs;
+      func.dfg.sinks.push_back(sinkVar);
     }
   }
 
