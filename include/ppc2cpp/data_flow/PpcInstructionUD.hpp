@@ -1,10 +1,11 @@
 
 #pragma once
 
-#include "PpcOperandCats.h"
-
 #include "ppcdisasm/ppc-dis.hpp"
 #include "opcode/ppc.h"
+
+#include "ppc2cpp/model/CpuMemory.hpp"
+#include "PpcOperandCats.h"
 
 namespace ppc2cpp {
 const uint64_t supported_register_types = 
@@ -25,8 +26,9 @@ extern std::unordered_set<int32_t> supportedInsn;
 
 class InstructionUD {
 public:
-  std::vector<uint32_t> inputs;
-  std::vector<uint32_t> outputs;
+  std::vector<CpuMemoryLocation> inputs;
+  std::vector<CpuMemoryLocation> outputs;
+  std::vector<int64_t> imms; // Also inputs basically
 };
 
 void initInstructionUD();

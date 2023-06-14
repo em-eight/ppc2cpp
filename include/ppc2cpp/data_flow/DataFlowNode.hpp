@@ -4,105 +4,102 @@
 #include <memory>
 #include <vector>
 
+#include "ppc2cpp/model/CpuMemory.hpp"
+
 namespace ppc2cpp {
-class Varnode;
-typedef std::shared_ptr<Varnode> VarnodePtr;
+class VarNode;
+typedef std::shared_ptr<VarNode> VarNodePtr;
 
 /**
  * Used in the data flow graph. A varnode represents either a source definition (immediate, function arg etc)
  * or the result of an instruction
 */
-class Varnode {
+class VarNode {
 public:
-  std::string label; // for visualization. A string that uniquely identifies a node (not neccessarily dot node labels)
-  std::vector<VarnodePtr> inputs;
+  std::vector<VarNodePtr> inputs;
 
-  Varnode() = default;
-  Varnode(std::vector<VarnodePtr> inputs) : inputs(inputs) {}
-  Varnode(std::string label) : label(label) {}
-  virtual ~Varnode() = default;
+  VarNode() = default;
+  VarNode(std::vector<VarNodePtr> inputs) : inputs(inputs) {}
+  virtual ~VarNode() = default;
 };
+
+/**
+ * A varnode in a data flow graph.
+*/
+class DataFlowNode : public VarNode {
+public:
+  // index of an instruction associated with the node. It can be the instruction that defined the variable, or its first usage
+  uint32_t index;
+
+  DataFlowNode(uint32_t index) : index(index) {}
+};
+typedef std::shared_ptr<DataFlowNode> DataFlowNodePtr;
+
+/**
+ * A varnode produced by one operand in an instruction's use-define information
+*/
+class OperandNode : public DataFlowNode {
+public:
+  // index of an instruction associated with the node. It can be the instruction that defined the variable, or its first usage
+  uint32_t opindex;
+
+  OperandNode(uint32_t index, uint32_t opindex) : DataFlowNode(index), opindex(opindex) {}
+};
+typedef std::shared_ptr<OperandNode> OperandNodePtr;
 
 /**
  * Varnode that is used as an explicit operand in instructions
 */
-class Operandnode : public Varnode {
+class RegisterNode : public OperandNode {
 public:
-  // index of instruction of definition or first usage within function
-  uint32_t index;
-  // operand index corresponding to the varnode.
-  int32_t opindex;
+  CpuMemoryLocation cpuMemoryLocation;
 
-  Operandnode(uint32_t index, int32_t opindex) : index(index), opindex(opindex) {
-    this->label = "ins" + std::to_string(index) + "op" + std::to_string(opindex);
-  }
-  Operandnode(uint32_t index, int32_t opindex, std::string label) : index(index), opindex(opindex), Varnode(label) {}
+  RegisterNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : OperandNode(index, opindex), cpuMemoryLocation(cpuMemoryLocation) {}
 };
-typedef std::shared_ptr<Operandnode> OperandnodePtr;
-
-/**
- * Varnode that is a "source" (does not have any inputs)
-*/
-class Sourcenode : public Operandnode {
-public:
-  Sourcenode(uint32_t index, int32_t opindex) : Operandnode(index, opindex) {
-    this->label = "source_ins" + std::to_string(index) + "op" + std::to_string(opindex);
-  }
-};
-typedef std::shared_ptr<Sourcenode> SourcenodePtr;
+typedef std::shared_ptr<RegisterNode> RegisterNodePtr;
 
 /**
  * Varnode that represents an immediate
 */
-class Immediatenode : public Sourcenode {
+class ImmediateNode : public OperandNode {
 public:
-  Immediatenode(uint32_t index, int32_t opindex) : Sourcenode(index, opindex) {
-    this->label = "imm_ins" + std::to_string(index) + "op" + std::to_string(opindex);
-  }
+  int64_t value;
+
+  ImmediateNode(uint32_t index, uint32_t opindex, int64_t value) : OperandNode(index, opindex), value(value) {}
 };
-typedef std::shared_ptr<Immediatenode> ImmediatenodePtr;
+typedef std::shared_ptr<ImmediateNode> ImmediateNodePtr;
 
 /**
  * Varnode that is an input to the function (register is used before defined)
 */
-class InputRegnode : public Sourcenode {
+class InputRegisterNode : public RegisterNode {
 public:
-  InputRegnode(uint32_t index, int32_t opindex) : Sourcenode(index, opindex) {
-    this->label = "reg_ins" + std::to_string(index) + "op" + std::to_string(opindex);
-  }
+
+  InputRegisterNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : RegisterNode(index, opindex, cpuMemoryLocation) {}
 };
-typedef std::shared_ptr<InputRegnode> InputRegnodePtr;
+typedef std::shared_ptr<InputRegisterNode> InputRegisterNodePtr;
 
 /**
  * Varnode that stems from an intermediate result of an instruction
 */
-class Resultnode : public Operandnode {
+class ResultNode : public RegisterNode {
 public:
-  Resultnode(uint32_t index, int32_t opindex) : Operandnode(index, opindex) {
-    this->label = "result_ins" + std::to_string(index) + "op" + std::to_string(opindex);
-  }
+  ResultNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : RegisterNode(index, opindex, cpuMemoryLocation) {}
 };
-typedef std::shared_ptr<Resultnode> ResultnodePtr;
+typedef std::shared_ptr<ResultNode> ResultNodePtr;
 
-class Sinknode : public Varnode {
+/**
+ * A data flow node that represents a sink instruction (instruction that uses its inputs but has no usages by other nodes)
+*/
+class SinkNode : public DataFlowNode {
 public:
-  // index of sink instruction
-  uint32_t index;
-
-  Sinknode(uint32_t index) : index(index) {
-    this->label = "sink" + std::to_string(index);
-  }
+  SinkNode(uint32_t index) : DataFlowNode(index) {}
 };
-typedef std::shared_ptr<Sinknode> SinknodePtr;
+typedef std::shared_ptr<SinkNode> SinkNodePtr;
 
-class Phinode : public Varnode {
+class PhiNode : public OperandNode {
 public:
-  Phinode(std::vector<VarnodePtr> inputs) : Varnode(inputs) {
-    label = "PHI_";
-    for (const auto& in : inputs) {
-      label += in->label + "_";
-    }
-  }
+  PhiNode(uint32_t index, uint32_t opindex) : OperandNode(index, opindex) {}
 };
-typedef std::shared_ptr<Phinode> PhinodePtr;
+typedef std::shared_ptr<PhiNode> PhiNodePtr;
 }

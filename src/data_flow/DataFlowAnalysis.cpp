@@ -27,53 +27,47 @@ void DataFlowAnalysis::functionDFA(Function& func, uint32_t blockIdx) {
     cout_insn_powerpc(insn, std::cout, dialect_raw);
     std::cout << "\n";
 
-    std::vector<VarnodePtr> insnInputs;
-    std::vector<VarnodePtr> insnOutputs;
+    std::vector<VarNodePtr> insnInputs;
+    std::vector<VarNodePtr> insnOutputs;
     FlowContext& flowContext = func.dfg.blockContexts[blockIdx]; // TODO: FlowContext is the union of output FlowContext of preceding nodes
 
     const struct powerpc_opcode* opcode = lookup_powerpc(insn, dialect_raw);
     InstructionUD insnUD = instructionUD(insn, opcode, dialect_raw);
     const ppc_opindex_t *opindex; // index into powerpc_operands array
     const struct powerpc_operand *operand;
+    
+    for (int i = 0; i < insnUD.imms.size(); i++) {
+      VarNodePtr opVar = std::make_shared<ImmediateNode>(pc, i, insnUD.imms[i]);
+      insnInputs.push_back(opVar);
+    }
 
     for (int i = 0; i < insnUD.inputs.size(); i++) {
-      operand = powerpc_operands + insnUD.inputs[i];
-      int64_t value = operand_value_powerpc (operand, insn, dialect_raw);
-
-      if (isImmediate(operand->flags, value)) {
-        VarnodePtr opVar = std::make_shared<Immediatenode>(pc, insnUD.inputs[i]);
+      std::vector<VarNodePtr> opVars = flowContext.getDefinition(insnUD.inputs[i]);
+      if (opVars.empty()) { // register undefined, create new definition
+        VarNodePtr opVar = std::make_shared<InputRegisterNode>(pc, i, insnUD.inputs[i]);
         insnInputs.push_back(opVar);
-      } else { // register
-        std::vector<VarnodePtr> opVars = flowContext.getDefinition(operand, value);
-        if (opVars.empty()) { // register undefined, create new definition
-          VarnodePtr opVar = std::make_shared<InputRegnode>(pc, insnUD.inputs[i]);
-          insnInputs.push_back(opVar);
-        } else if (opVars.size() == 1) {
-          insnInputs.push_back(opVars[0]);
-        } else { // multiple potential definitions from multiple basic blocks, create phi node
-          VarnodePtr opVar = std::make_shared<Phinode>(opVars);
-          insnInputs.push_back(opVar);
-        }
+      } else if (opVars.size() == 1) {
+        insnInputs.push_back(opVars[0]);
+      } else { // multiple potential definitions from multiple basic blocks, create phi node
+        VarNodePtr opVar = std::make_shared<PhiNode>(pc, i);
+        opVar->inputs = opVars;
+        insnInputs.push_back(opVar);
       }
     }
     
     for (int i = 0; i < insnUD.outputs.size(); i++) {
-      operand = powerpc_operands + insnUD.outputs[i];
-      int64_t value = operand_value_powerpc (operand, insn, dialect_raw);
-          
-      VarnodePtr opVar = std::make_shared<Resultnode>(pc, insnUD.outputs[i]);
+      VarNodePtr opVar = std::make_shared<ResultNode>(pc, i, insnUD.outputs[i]);
       insnOutputs.push_back(opVar);
-      flowContext.setDefinition(operand, value, opVar);
+      flowContext.setDefinition(insnUD.outputs[i], opVar);
     }
 
-
-    for (VarnodePtr output : insnOutputs) {
+    for (VarNodePtr output : insnOutputs) {
       output->inputs = insnInputs;
     }
 
     // keep track of sinks
     if (storeInsn.contains(opcode->opcode)) {
-      SinknodePtr sinkVar = std::make_shared<Sinknode>(pc);
+      SinkNodePtr sinkVar = std::make_shared<SinkNode>(pc);
       sinkVar->inputs = insnInputs;
       func.dfg.sinks.push_back(sinkVar);
     }

@@ -17,7 +17,7 @@ public:
    * - branch conditions of basic blocks
    * - return values of exit blocks
   */
-  std::vector<SinknodePtr> sinks;
+  std::vector<SinkNodePtr> sinks;
   // the output machine state for each basic block
   std::vector<ppc2cpp::FlowContext> blockContexts;
 };

@@ -51,6 +51,10 @@ const std::unordered_set<int32_t> fixedPointInsn {
  PPC_FORM_DIVWUO, 
  PPC_FORM_DIVWUO_, 
 
+ PPC_FORM_MCRF,
+ PPC_FORM_MFSPR,
+ PPC_FORM_MTSPR,
+
  PPC_FORM_MULHW, 
  PPC_FORM_MULHW_, 
  PPC_FORM_MULHWU, 
@@ -247,7 +251,95 @@ const std::unordered_set<int32_t> storeInsn {
 };
 // ---- End of instruction set partitioning -----
 
-// Other sets here (setsXER, setsFPSCR, setsCR etc)
+// Other sets here (setsXER, setsFPSCR, setsCR0 etc)
+const std::unordered_set<int32_t> setsCR0 {
+ PPC_FORM_ADD_ ,
+ PPC_FORM_ADDC_ ,
+ PPC_FORM_ADDCO_ ,
+ PPC_FORM_ADDE_ ,
+ PPC_FORM_ADDEO_ ,
+ PPC_FORM_ADDIC_ ,
+ PPC_FORM_ADDME_ ,
+ PPC_FORM_ADDMEO_ ,
+ PPC_FORM_ADDO_ ,
+ PPC_FORM_ADDZE_ ,
+ PPC_FORM_ADDZEO_ ,
+ PPC_FORM_AND_ ,
+ PPC_FORM_ANDC_ ,
+ PPC_FORM_ANDI_ ,
+ PPC_FORM_ANDIS_, 
+
+ PPC_FORM_DIVW_, 
+ PPC_FORM_DIVWO_, 
+ PPC_FORM_DIVWU_, 
+ PPC_FORM_DIVWUO_, 
+
+ PPC_FORM_MULHW_, 
+ PPC_FORM_MULHWU_, 
+ PPC_FORM_MULLW_, 
+ PPC_FORM_MULLWO_, 
+
+ PPC_FORM_NAND_, 
+ PPC_FORM_NEG_, 
+ PPC_FORM_NEGO_, 
+ PPC_FORM_NOR_, 
+
+ PPC_FORM_OR_, 
+ PPC_FORM_ORC_, 
+
+ PPC_FORM_RLWIMI_, 
+ PPC_FORM_RLWINM_, 
+ PPC_FORM_RLWNM_, 
+
+ PPC_FORM_SLW_, 
+ PPC_FORM_SRAW_, 
+ PPC_FORM_SRAWI_, 
+ PPC_FORM_SRW_, 
+
+ PPC_FORM_SUBF_, 
+ PPC_FORM_SUBFC_, 
+ PPC_FORM_SUBFCO_, 
+ PPC_FORM_SUBFE_, 
+ PPC_FORM_SUBFEO_, 
+ PPC_FORM_SUBFME_, 
+ PPC_FORM_SUBFMEO_, 
+ PPC_FORM_SUBFO_, 
+ PPC_FORM_SUBFZE_, 
+ PPC_FORM_SUBFZEO_, 
+
+ PPC_FORM_XOR_, 
+};
+
+const std::unordered_set<int32_t> setsCR1 {
+ PPC_FORM_FABS_, 
+ PPC_FORM_FADD_, 
+ PPC_FORM_FADDS_, 
+ PPC_FORM_FCTIW_, 
+ PPC_FORM_FCTIWZ_, 
+ PPC_FORM_FDIV_, 
+ PPC_FORM_FDIVS_, 
+ PPC_FORM_FMADD_, 
+ PPC_FORM_FMADDS_, 
+ PPC_FORM_FMR_, 
+ PPC_FORM_FMSUB_, 
+ PPC_FORM_FMSUBS_, 
+ PPC_FORM_FMUL_, 
+ PPC_FORM_FMULS_, 
+ PPC_FORM_FNABS_, 
+ PPC_FORM_FNEG_, 
+ PPC_FORM_FNMADD_, 
+ PPC_FORM_FNMADDS_, 
+ PPC_FORM_FNMSUB_, 
+ PPC_FORM_FNMSUBS_, 
+ PPC_FORM_FRES_, 
+ PPC_FORM_FRSP_, 
+ PPC_FORM_FRSQRTE_, 
+ PPC_FORM_FSEL_, 
+ PPC_FORM_FSQRT_, 
+ PPC_FORM_FSQRTS_, 
+ PPC_FORM_FSUB_, 
+ PPC_FORM_FSUBS_, 
+};
 
 std::unordered_set<int32_t> nonStoreInsn;
 std::unordered_set<int32_t> supportedInsn;
@@ -262,6 +354,30 @@ void initInstructionUD() {
   supportedInsn.insert(storeInsn.begin(), storeInsn.end());
 }
 
+void appendCRRegister(std::vector<CpuMemoryLocation>& ops, int64_t reg) {
+  for (int i = 0; i < 4; i++) {
+    ops.push_back({CpuMemorySpace::MEM_SPACE_CR_BIT, 4*reg+i});
+  }
+}
+
+void appendOperands(std::vector<CpuMemoryLocation>& ops, const struct powerpc_operand *operand, int64_t value) {
+  if ((operand->flags & PPC_OPERAND_GPR) != 0
+      || ((operand->flags & PPC_OPERAND_GPR_0) != 0 && value != 0)) {
+    ops.push_back({CpuMemorySpace::MEM_SPACE_GPR, value});
+  } else if ((operand->flags & PPC_OPERAND_FPR) != 0) {
+    ops.push_back({CpuMemorySpace::MEM_SPACE_FPR, value});
+  } else if ((operand->flags & PPC_OPERAND_GQR) != 0) {
+    ops.push_back({CpuMemorySpace::MEM_SPACE_GQR, value});
+  } else if ((operand->flags & PPC_OPERAND_CR_BIT) != 0) {
+    ops.push_back({CpuMemorySpace::MEM_SPACE_CR_BIT, value});
+  } else if ((operand->flags & PPC_OPERAND_SPR) != 0) {
+    ops.push_back({CpuMemorySpace::MEM_SPACE_SPR, value});
+  } else if ((operand->flags & PPC_OPERAND_CR_REG) != 0) { // Create 4 inputs when an entire CR field is specified
+    appendCRRegister(ops, value);
+  } else {
+    throw std::runtime_error("Cannot determine use-define info for unsupported operand");
+  }
+}
 
 InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, ppc_cpu_t dialect) {
   if (!supportedInsn.contains(opcode->opcode)) {
@@ -282,20 +398,26 @@ InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, 
 
     if ((operand->flags & supported_register_types) != 0) { // register input
       if (nonStoreInsn.contains(opcode->opcode) && registerInputCount == 0) {
-        insnUD.outputs.push_back(operand_idx);
+        appendOperands(insnUD.outputs, operand, value);
       } else {
-        insnUD.inputs.push_back(operand_idx);
+        appendOperands(insnUD.inputs, operand, value);
       }
       if (operand_idx == RAL || operand_idx == RAS) {
-        insnUD.outputs.push_back(operand_idx);
+        insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_GPR, value});
       }
-      // TODO: check setting of CR, XER and FPSCR (maybe PS1 too)
       registerInputCount++;
     } else if (isImmediate(operand->flags, value)) { // immediate input
-      insnUD.inputs.push_back(operand_idx);
+      insnUD.imms.push_back(value);
     } else {
       throw std::runtime_error("unsupported operand, instruction " + std::string(opcode->name) + " operand index " + std::to_string(operand_idx));
     }
+  }
+
+  if (setsCR0.contains(opcode->opcode)) {
+    appendCRRegister(insnUD.outputs, 0);
+  }
+  if (setsCR1.contains(opcode->opcode)) {
+    appendCRRegister(insnUD.outputs, 1);
   }
 
   return insnUD;

@@ -48,10 +48,10 @@ TEST(ControlFlowAnalysisTest, kartActionCalc) {
   }
 }
 
-void printNodeRecurse(ProgramLoaderPtr programLoader, const Function& func, VarnodePtr it) {
+/*void printNodeRecurse(ProgramLoaderPtr programLoader, const Function& func, VarnodePtr it) {
   if (it->inputs.size() != 0) {
     std::cout << it->label << ": ";
-    if (OperandnodePtr operandIn = dynamic_pointer_cast<Operandnode>(it)) {
+    if (OperandNodePtr operandIn = dynamic_pointer_cast<OperandNode>(it)) {
       // TODO: create assembly member to Function and create Disassembly analyzer
       uint32_t* funcPtr = (uint32_t*) programLoader->getBufferAtLocation(func.location).value();
       const uint32_t insn = be32(*(funcPtr + operandIn->index));
@@ -71,7 +71,7 @@ void printNodeRecurse(ProgramLoaderPtr programLoader, const Function& func, Varn
     }
   }
 
-}
+}*/
 
 TEST(DataFlowAnalysisTest, kartActionCalc) {
   filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
@@ -92,10 +92,10 @@ TEST(DataFlowAnalysisTest, kartActionCalc) {
   DataFlowAnalysis dfa(testProject.programLoader);
   dfa.functionDFA(quatmul);
   FlowContext& flowContext = quatmul.dfg.blockContexts[0];
-  VarnodePtr outX = flowContext.fprs[0][0];
+  VarNodePtr outX = flowContext.fprs[0][0];
 
   std::cout << "f0 backwards flow" << std::endl;
-  printNodeRecurse(testProject.programLoader, quatmul, outX);
+  //printNodeRecurse(testProject.programLoader, quatmul, outX);
   outputDfgDot(std::cout, testProject.programLoader, quatmul);
   EXPECT_FALSE(true);
 }

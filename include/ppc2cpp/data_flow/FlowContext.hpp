@@ -1,8 +1,10 @@
 
 #pragma once
 
-#include "DataFlowNode.hpp"
 #include "opcode/ppc.h"
+
+#include "ppc2cpp/model/CpuMemory.hpp"
+#include "DataFlowNode.hpp"
 
 namespace ppc2cpp {
 /*const uint64_t supported_register_types = 
@@ -14,58 +16,55 @@ namespace ppc2cpp {
   PPC_OPERAND_SPR |
   PPC_OPERAND_GQR;*/
 
-/**
- * Possibly migrate to this class instead of std::vector<VarnodePtr>
-*/
-class Definition {
+class FlowContext {
 public:
-  std::vector<VarnodePtr> defs;
-};
-
-typedef struct FlowContext {
-  std::vector<VarnodePtr> gprs[32];
-  std::vector<VarnodePtr> cr[32]; // one varnode for each bit
-  std::vector<VarnodePtr> lr;
-  std::vector<VarnodePtr> ctr;
-  std::vector<VarnodePtr> xer;
-  std::vector<VarnodePtr> fprs[32];
-  std::vector<VarnodePtr> fpscr;
-  std::vector<VarnodePtr> gqrs[8];
-  std::vector<VarnodePtr> psfs[32];
-
-  // TODO: refactor code duplication in two functions below
-  std::vector<VarnodePtr> getDefinition(const struct powerpc_operand *operand, int64_t value) {
-    if ((operand->flags & PPC_OPERAND_GPR) != 0
-        || ((operand->flags & PPC_OPERAND_GPR_0) != 0 && value != 0)) {
-      return this->gprs[value];
-    } else if ((operand->flags & PPC_OPERAND_FPR) != 0) {
-      return this->fprs[value];
-    } else if ((operand->flags & PPC_OPERAND_GQR) != 0) {
-      return this->gqrs[value];
-    } else if ((operand->flags & PPC_OPERAND_CR_BIT) != 0) {
-      return this->cr[value];
+  std::vector<VarNodePtr> gprs[32];
+  std::vector<VarNodePtr> cr[32]; // one varnode for each bit
+  std::vector<VarNodePtr> lr;
+  std::vector<VarNodePtr> ctr;
+  std::vector<VarNodePtr> xer;
+  std::vector<VarNodePtr> fprs[32];
+  std::vector<VarNodePtr> fpscr;
+  std::vector<VarNodePtr> gqrs[8];
+  std::vector<VarNodePtr> ps1s[32];
+  
+  std::vector<VarNodePtr>& getSprDefinition(int64_t sprNum) {
+    if (sprNum == 1) {
+      return xer;
+    } else if (sprNum == 8) {
+      return lr;
+    } else if (sprNum == 9) {
+      return ctr;
+    } else if (912 <= sprNum && sprNum < 920) {
+      return gqrs[sprNum - 912];
     } else {
-      throw std::runtime_error("Cannot determine operand type (value=" + std::to_string(value) + ")");
+      throw std::runtime_error("Unknown SPR " + std::to_string(sprNum));
     }
   }
   
-  void setDefinition(const struct powerpc_operand *operand, int64_t value, VarnodePtr var) {
-    if ((operand->flags & PPC_OPERAND_GPR) != 0
-        || ((operand->flags & PPC_OPERAND_GPR_0) != 0 && value != 0)) {
-      this->gprs[value].clear();
-      this->gprs[value].push_back(var);
-    } else if ((operand->flags & PPC_OPERAND_FPR) != 0) {
-      this->fprs[value].clear();
-      this->fprs[value].push_back(var);
-    } else if ((operand->flags & PPC_OPERAND_GQR) != 0) {
-      this->gqrs[value].clear();
-      this->gqrs[value].push_back(var);
-    } else if ((operand->flags & PPC_OPERAND_CR_BIT) != 0) {
-      this->cr[value].clear();
-      this->cr[value].push_back(var);
-    } else {
-      throw std::runtime_error("Cannot determine operand type (value=" + std::to_string(value) + ")");
+  std::vector<VarNodePtr>& getDefinition(const CpuMemoryLocation& cpuMemLoc) {
+    switch (cpuMemLoc.memspace) {
+      case CpuMemorySpace::MEM_SPACE_GPR:
+      return gprs[cpuMemLoc.value];
+      case CpuMemorySpace::MEM_SPACE_FPR:
+      return fprs[cpuMemLoc.value];
+      case CpuMemorySpace::MEM_SPACE_CR_BIT:
+      return cr[cpuMemLoc.value];
+      case CpuMemorySpace::MEM_SPACE_GQR:
+      return gqrs[cpuMemLoc.value];
+      case CpuMemorySpace::MEM_SPACE_PS1:
+      return ps1s[cpuMemLoc.value];
+      case CpuMemorySpace::MEM_SPACE_SPR:
+      return getSprDefinition(cpuMemLoc.value);
+      default:
+      throw std::runtime_error("Unknown CPU register space");
     }
   }
-} FlowContext;
+  
+  void setDefinition(const CpuMemoryLocation& cpuMemLoc, VarNodePtr var) {
+    std::vector<VarNodePtr>& def = getDefinition(cpuMemLoc);
+    def.clear();
+    def.push_back(var);
+  }
+};
 }
