@@ -21,6 +21,7 @@ extern const std::unordered_set<int32_t> fixedPointInsn;
 extern const std::unordered_set<int32_t> floatInsn;
 extern const std::unordered_set<int32_t> loadInsn;
 extern const std::unordered_set<int32_t> storeInsn;
+extern const std::unordered_set<int32_t> branchInsn;
 extern std::unordered_set<int32_t> nonStoreInsn;
 extern std::unordered_set<int32_t> supportedInsn;
 

@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <unordered_set>
+
 #include "opcode/ppc.h"
 
 #include "ppc2cpp/model/CpuMemory.hpp"
@@ -16,24 +18,48 @@ namespace ppc2cpp {
   PPC_OPERAND_SPR |
   PPC_OPERAND_GQR;*/
 
+using Definition = std::unordered_set<VarNodePtr>;
+
 class FlowContext {
 public:
-  std::vector<VarNodePtr> gprs[32];
-  std::vector<VarNodePtr> cr[32]; // one varnode for each bit
-  std::vector<VarNodePtr> lr;
-  std::vector<VarNodePtr> ctr;
-  std::vector<VarNodePtr> xer;
-  std::vector<VarNodePtr> fprs[32];
-  std::vector<VarNodePtr> fpscr;
-  std::vector<VarNodePtr> gqrs[8];
-  std::vector<VarNodePtr> ps1s[32];
+  Definition gprs[32];
+  Definition cr[32]; // one varnode for each bit
+  Definition lr;
+  Definition ctr;
+  Definition xer;
+  Definition fprs[32];
+  Definition fpscr;
+  Definition gqrs[8];
+  Definition ps1s[32];
+
+  void contextUnion(const FlowContext& other) {
+    for (int i = 0; i < 32; i++) {
+      gprs[i].insert(other.gprs[i].begin(), other.gprs[i].end());
+    }
+    for (int i = 0; i < 32; i++) {
+      fprs[i].insert(other.fprs[i].begin(), other.fprs[i].end());
+    }
+    for (int i = 0; i < 32; i++) {
+      cr[i].insert(other.cr[i].begin(), other.cr[i].end());
+    }
+    for (int i = 0; i < 32; i++) {
+      ps1s[i].insert(other.ps1s[i].begin(), other.ps1s[i].end());
+    }
+    for (int i = 0; i < 8; i++) {
+      gqrs[i].insert(other.gqrs[i].begin(), other.gqrs[i].end());
+    }
+    lr.insert(other.lr.begin(), other.lr.end());
+    ctr.insert(other.ctr.begin(), other.ctr.end());
+    xer.insert(other.xer.begin(), other.xer.end());
+    fpscr.insert(other.fpscr.begin(), other.fpscr.end());
+  }
   
-  std::vector<VarNodePtr>& getSprDefinition(int64_t sprNum) {
-    if (sprNum == 1) {
+  Definition& getSprDefinition(int64_t sprNum) {
+    if (sprNum == SPR_VALUE_XER) {
       return xer;
-    } else if (sprNum == 8) {
+    } else if (sprNum == SPR_VALUE_LR) {
       return lr;
-    } else if (sprNum == 9) {
+    } else if (sprNum == SPR_VALUE_CTR) {
       return ctr;
     } else if (912 <= sprNum && sprNum < 920) {
       return gqrs[sprNum - 912];
@@ -42,7 +68,7 @@ public:
     }
   }
   
-  std::vector<VarNodePtr>& getDefinition(const CpuMemoryLocation& cpuMemLoc) {
+  Definition& getDefinition(const CpuMemoryLocation& cpuMemLoc) {
     switch (cpuMemLoc.memspace) {
       case CpuMemorySpace::MEM_SPACE_GPR:
       return gprs[cpuMemLoc.value];
@@ -62,9 +88,9 @@ public:
   }
   
   void setDefinition(const CpuMemoryLocation& cpuMemLoc, VarNodePtr var) {
-    std::vector<VarNodePtr>& def = getDefinition(cpuMemLoc);
+    Definition& def = getDefinition(cpuMemLoc);
     def.clear();
-    def.push_back(var);
+    def.insert(var);
   }
 };
 }

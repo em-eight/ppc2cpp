@@ -92,9 +92,9 @@ TEST(DataFlowAnalysisTest, kartActionCalc) {
   DataFlowAnalysis dfa(testProject.programLoader);
   dfa.functionDFA(quatmul);
   FlowContext& flowContext = quatmul.dfg.blockContexts[0];
-  VarNodePtr outX = flowContext.fprs[0][0];
+  //VarNodePtr outX = flowContext.fprs[0][0];
 
-  std::cout << "f0 backwards flow" << std::endl;
+  //std::cout << "f0 backwards flow" << std::endl;
   //printNodeRecurse(testProject.programLoader, quatmul, outX);
   outputDfgDot(std::cout, testProject.programLoader, quatmul);
   EXPECT_FALSE(true);

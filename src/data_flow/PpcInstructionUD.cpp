@@ -2,6 +2,7 @@
 #include "ppcdisasm/ppc-forms.h"
 #include "ppcdisasm/ppc-operands.h"
 
+#include "ppc2cpp/common/insn_properties.h"
 #include "ppc2cpp/data_flow/PpcInstructionUD.hpp"
 
 using namespace ppcdisasm;
@@ -41,6 +42,30 @@ const std::unordered_set<int32_t> fixedPointInsn {
  PPC_FORM_ANDC_ ,
  PPC_FORM_ANDI_ ,
  PPC_FORM_ANDIS_, 
+
+ PPC_FORM_CMP,
+ PPC_FORM_CMPI,
+ PPC_FORM_CMPL,
+ PPC_FORM_CMPLI,
+
+ PPC_FORM_CNTLZW,
+ PPC_FORM_CNTLZW_,
+
+ PPC_FORM_CRAND,
+ PPC_FORM_CRANDC,
+ PPC_FORM_CREQV,
+ PPC_FORM_CRNAND,
+ PPC_FORM_CRNOR,
+ PPC_FORM_CROR,
+ PPC_FORM_CRORC,
+ PPC_FORM_CRXOR,
+
+ PPC_FORM_EQV,
+ PPC_FORM_EQV_,
+ PPC_FORM_EXTSB,
+ PPC_FORM_EXTSB_,
+ PPC_FORM_EXTSH,
+ PPC_FORM_EXTSH_,
 
  PPC_FORM_DIVW, 
  PPC_FORM_DIVW_, 
@@ -249,6 +274,21 @@ const std::unordered_set<int32_t> storeInsn {
  PPC_FORM_STWUX, 
  PPC_FORM_STWX, 
 };
+
+const std::unordered_set<int32_t> branchInsn {
+  PPC_FORM_B,
+  PPC_FORM_BA,
+  PPC_FORM_BC,
+  PPC_FORM_BCA,
+  PPC_FORM_BCCTR,
+  PPC_FORM_BCCTRL,
+  PPC_FORM_BCL,
+  PPC_FORM_BCLA,
+  PPC_FORM_BCLR,
+  PPC_FORM_BCLRL,
+  PPC_FORM_BL,
+  PPC_FORM_BLA
+};
 // ---- End of instruction set partitioning -----
 
 // Other sets here (setsXER, setsFPSCR, setsCR0 etc)
@@ -269,10 +309,16 @@ const std::unordered_set<int32_t> setsCR0 {
  PPC_FORM_ANDI_ ,
  PPC_FORM_ANDIS_, 
 
+ PPC_FORM_CNTLZW_,
+
  PPC_FORM_DIVW_, 
  PPC_FORM_DIVWO_, 
  PPC_FORM_DIVWU_, 
  PPC_FORM_DIVWUO_, 
+
+ PPC_FORM_EQV_,
+ PPC_FORM_EXTSB_,
+ PPC_FORM_EXTSH_,
 
  PPC_FORM_MULHW_, 
  PPC_FORM_MULHWU_, 
@@ -352,6 +398,7 @@ void initInstructionUD() {
   
   supportedInsn.insert(nonStoreInsn.begin(), nonStoreInsn.end());
   supportedInsn.insert(storeInsn.begin(), storeInsn.end());
+  supportedInsn.insert(branchInsn.begin(), branchInsn.end());
 }
 
 void appendCRRegister(std::vector<CpuMemoryLocation>& ops, int64_t reg) {
@@ -379,12 +426,74 @@ void appendOperands(std::vector<CpuMemoryLocation>& ops, const struct powerpc_op
   }
 }
 
+void handleBranchUD(InstructionUD& insnUD, uint32_t insn, ppc_cpu_t dialect) {
+  if (isBranchUncoditional(insn)) {
+    int64_t value = operand_value_powerpc (LI, insn, dialect);
+    insnUD.imms.push_back(value);
+    int64_t isAbs = isAbsolute(insn) ? 1 : 0;
+    insnUD.imms.push_back(isAbs);
+  } else {
+    // BO field dictates use-define
+    int64_t bo = operand_value_powerpc (BO, insn, dialect);
+    insnUD.imms.push_back(bo);
+    int64_t bi = operand_value_powerpc (BI, insn, dialect);
+    if (((bo >> 1) & 0xf) == 0) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_CR_BIT, bi});
+      insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+    } else if (((bo >> 1) & 0xf) == 1) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_CR_BIT, bi});
+      insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+    } else if (((bo >> 2) & 0x7) == 1) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_CR_BIT, bi});
+    } else if (((bo >> 1) & 0xf) == 4) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_CR_BIT, bi});
+      insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+    } else if (((bo >> 1) & 0xf) == 5) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_CR_BIT, bi});
+      insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+    } else if (((bo >> 2) & 0x7) == 3) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_CR_BIT, bi});
+    } else if (((bo >> 1) & 0xb) == 8) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+      insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+    } else if (((bo >> 1) & 0xb) == 9) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+      insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+    } else if (((bo >> 2) & 0x7) == 5) {
+      // branch always
+    } else throw std::runtime_error("Cuold not decode conditional branch BO field " + std::to_string(bo));
+
+    if (isBranchConditional(insn)) {
+      int64_t value = operand_value_powerpc (BD, insn, dialect);
+      insnUD.imms.push_back(value);
+      int64_t isAbs = isAbsolute(insn) ? 1 : 0;
+      insnUD.imms.push_back(isAbs);
+    } else if (isBranchToLR(insn)) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_LR});
+    } else if (isBranchToCTR(insn)) {
+      insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
+    }
+  }
+  if (isLink(insn)) {
+    insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_LR});
+  }
+}
+
 InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, ppc_cpu_t dialect) {
   if (!supportedInsn.contains(opcode->opcode)) {
     throw std::runtime_error("Unsupported instruction " + std::string(opcode->name));
   }
 
   InstructionUD insnUD;
+
+  if (isBranch(insn)) {
+    handleBranchUD(insnUD, insn, dialect);
+    return insnUD;
+  }
 
   const ppc_opindex_t *opindex;
   const struct powerpc_operand *operand;
@@ -413,12 +522,17 @@ InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, 
     }
   }
 
+  // implicit input operands
+
+  // implicit output operands
   if (setsCR0.contains(opcode->opcode)) {
     appendCRRegister(insnUD.outputs, 0);
   }
   if (setsCR1.contains(opcode->opcode)) {
     appendCRRegister(insnUD.outputs, 1);
   }
+  // XER and FPSCR setting is ignored for now (it's ok because the instructions that use them are marked as unsupported)
+  // similarly, non UISA register instructions/operands are unsupported (it's ok because this project's scope is only C/C++ compiled functions)
 
   return insnUD;
 }

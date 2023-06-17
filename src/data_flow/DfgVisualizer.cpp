@@ -23,7 +23,7 @@ std::string getDotLabel(const ProgramLoaderPtr& programLoader, const Function& f
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
       return std::to_string(imm->value);
     } else if (RegisterNodePtr registerVar = dynamic_pointer_cast<RegisterNode>(var)) {
-      return cpuMemorySpace2prefix(registerVar->cpuMemoryLocation.memspace) + std::to_string(registerVar->cpuMemoryLocation.value);
+      return cpuMemorySpace2label(registerVar->cpuMemoryLocation);
     } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
   } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
 }
@@ -85,9 +85,11 @@ void outputDfgDot(std::ostream& os, const ProgramLoaderPtr& programLoader, const
 
   os << "strict digraph {\n";
 
-  for (const auto& sink : dfg.sinks) {
-    outputNode(os, programLoader, func, sink);
-    outputDfgDotRecurse(os, programLoader, func, sink);
+  for (const auto& blockSinks : dfg.sinks) {
+    for (const auto& sink : blockSinks) {
+      outputNode(os, programLoader, func, sink);
+      outputDfgDotRecurse(os, programLoader, func, sink);
+    }
   }
   
   os << "\n}\n";

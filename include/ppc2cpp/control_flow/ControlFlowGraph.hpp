@@ -21,7 +21,7 @@ public:
   uint32_t start;
   // Offset from function start. The address of the function that branches to another basic block
   uint32_t end;
-  // block location with respect to current function. start and end are only valid for INTERNAL BlockType
+  // block type. start and end are only valid for INTERNAL BlockType
   BlockType blockType;
 
   BasicBlock(uint32_t start) : start(start), end(start), blockType(INTERNAL) {}

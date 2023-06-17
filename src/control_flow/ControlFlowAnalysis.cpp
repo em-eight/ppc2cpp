@@ -34,7 +34,7 @@ void ControlFlowAnalysis::functionCFA(Function& func, uint32_t blockIdx) {
       int32_t branchVal = ppcdisasm::operand_value_powerpc(BD, insn, ppcdisasm::ppc_750cl_dialect);
       handleBranch(insn, blockIdx, func, pc, branchVal);
 
-      if (isLink(insn) || !isBranchConditionUnconditional(insn) && pc+1 < func.length()) {
+      if ((isLink(insn) || !isBranchConditionUnconditional(insn)) && pc+1 < func.length()) {
         int32_t maybeNewBlock = func.cfg.tryCreateSuccessorInternal(blockIdx, pc, pc + 1);
         if (maybeNewBlock >= 0) functionCFA(func, maybeNewBlock);
       }
@@ -42,7 +42,7 @@ void ControlFlowAnalysis::functionCFA(Function& func, uint32_t blockIdx) {
     } else if (isBranchToLR(insn) || isBranchToCTR(insn)) {
       func.cfg.createSuccessorRuntime(blockIdx, pc);
 
-      if (isLink(insn) || !isBranchConditionUnconditional(insn) && pc+1 < func.length()) {
+      if ((isLink(insn) || !isBranchConditionUnconditional(insn)) && pc+1 < func.length()) {
         int32_t maybeNewBlock = func.cfg.tryCreateSuccessorInternal(blockIdx, pc, pc + 1);
         if (maybeNewBlock >= 0) functionCFA(func, maybeNewBlock);
       }
