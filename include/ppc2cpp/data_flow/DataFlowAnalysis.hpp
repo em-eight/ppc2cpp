@@ -9,10 +9,14 @@ namespace ppc2cpp {
 class DataFlowAnalysis {
 private:
   ProgramLoaderPtr programLoader;
+  std::vector<int> worklist;
+
+  void initWorklist(const Function& func);
+  void initWorklistRecurse(const Function& func, int blockIdx);
 
 public:
   DataFlowAnalysis(ProgramLoaderPtr programLoader) : programLoader(programLoader) {}
   void functionDFA(Function& func);
-  void functionDFA(Function& func, uint32_t blockIdx);
+  void functionDFAImpl(Function& func);
 };
 }

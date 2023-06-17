@@ -10,24 +10,50 @@
 using namespace ppc2cpp;
 using namespace ppcdisasm;
 
+void DataFlowAnalysis::initWorklist(const Function& func) {
+  worklist.clear();
+  initWorklistRecurse(func, 0);
+}
+
+void DataFlowAnalysis::initWorklistRecurse(const Function& func, int blockIdx) {
+  worklist.push_back(blockIdx);
+  for (auto successor : func.cfg.psTable[blockIdx].succ) {
+    if (func.cfg.blocks[successor].blockType == INTERNAL && std::find(worklist.begin(), worklist.end(), successor) == worklist.end()) {
+      initWorklistRecurse(func, successor);
+    }
+  }
+}
+
 void DataFlowAnalysis::functionDFA(Function& func) {
+  initWorklist(func);
   func.dfg.blockContexts.resize(func.cfg.blocks.size());
   disassemble_init_powerpc();
   initInstructionUD();
-  functionDFA(func, 0);
+  
+  functionDFAImpl(func);
 }
 
 void initBlockContext(Function& func, uint32_t blockIdx) {
   // A block's initial flowContext is the union of the output FlowContext of preceding nodes
-  FlowContext& flowContext = func.dfg.blockContexts[blockIdx];
+  FlowContext flowContext;
   for (const auto& pred_block_idx : func.cfg.psTable[blockIdx].pred) {
     flowContext.contextUnion(func.dfg.blockContexts[pred_block_idx]);
   }
+  func.dfg.blockContexts[blockIdx] = flowContext;
 }
 
-void DataFlowAnalysis::functionDFA(Function& func, uint32_t blockIdx) {
+void DataFlowAnalysis::functionDFAImpl(Function& func) {
+  if (worklist.empty()) return;
+  for (int item : worklist) {std::cout << item << " ";} std::cout << std::endl;
+  int blockIdx = worklist[0];
+  worklist.erase(worklist.begin());
+  for (int item : worklist) {std::cout << item << " ";} std::cout << std::endl;
+
   ppc_cpu_t dialect_raw = ppc_750cl_dialect | PPC_OPCODE_RAW; // raw mode: iterate all operands and only use base mnemonics
 
+  const FlowContextSizes prevSizes = func.dfg.blockContexts[blockIdx].getSizes();
+  initBlockContext(func, blockIdx);
+  FlowContext& flowContext = func.dfg.blockContexts[blockIdx];
   std::vector<SinkNodePtr> blockSinks;
 
   uint32_t* funcPtr = (uint32_t*) programLoader->getBufferAtLocation(func.location).value();
@@ -40,8 +66,6 @@ void DataFlowAnalysis::functionDFA(Function& func, uint32_t blockIdx) {
 
     std::vector<VarNodePtr> insnInputs;
     std::vector<VarNodePtr> insnOutputs;
-    initBlockContext(func, blockIdx);
-    FlowContext& flowContext = func.dfg.blockContexts[blockIdx];
 
     const struct powerpc_opcode* opcode = lookup_powerpc(insn, dialect_raw);
     InstructionUD insnUD = instructionUD(insn, opcode, dialect_raw);
@@ -96,5 +120,15 @@ void DataFlowAnalysis::functionDFA(Function& func, uint32_t blockIdx) {
 
   func.dfg.sinks.push_back(blockSinks);
 
-  // TODO: succeding block DFA
+  // If block DFA produced any changes, the block's successor need updating
+  const FlowContextSizes postSizes = flowContext.getSizes();
+  if (prevSizes != postSizes) {
+    for (int item : func.cfg.psTable[blockIdx].succ) {std::cout << item << " ";} std::cout << std::endl;
+    for (auto successor : func.cfg.psTable[blockIdx].succ) {
+      if (func.cfg.blocks[successor].blockType == INTERNAL && std::find(worklist.begin(), worklist.end(), successor) == worklist.end()) {
+        worklist.insert(worklist.begin(), successor);
+      }
+    }
+  }
+  functionDFAImpl(func);
 }
