@@ -27,6 +27,7 @@ void DataFlowAnalysis::initWorklistRecurse(const Function& func, int blockIdx) {
 void DataFlowAnalysis::functionDFA(Function& func) {
   initWorklist(func);
   func.dfg.blockContexts.resize(func.cfg.blocks.size());
+  func.dfg.sinks.resize(func.cfg.blocks.size());
   disassemble_init_powerpc();
   initInstructionUD();
   
@@ -44,17 +45,16 @@ void initBlockContext(Function& func, uint32_t blockIdx) {
 
 void DataFlowAnalysis::functionDFAImpl(Function& func) {
   if (worklist.empty()) return;
-  for (int item : worklist) {std::cout << item << " ";} std::cout << std::endl;
   int blockIdx = worklist[0];
   worklist.erase(worklist.begin());
-  for (int item : worklist) {std::cout << item << " ";} std::cout << std::endl;
 
   ppc_cpu_t dialect_raw = ppc_750cl_dialect | PPC_OPCODE_RAW; // raw mode: iterate all operands and only use base mnemonics
 
   const FlowContextSizes prevSizes = func.dfg.blockContexts[blockIdx].getSizes();
   initBlockContext(func, blockIdx);
   FlowContext& flowContext = func.dfg.blockContexts[blockIdx];
-  std::vector<SinkNodePtr> blockSinks;
+  std::vector<SinkNodePtr>& blockSinks = func.dfg.sinks[blockIdx];
+  blockSinks.clear();
 
   uint32_t* funcPtr = (uint32_t*) programLoader->getBufferAtLocation(func.location).value();
   for (uint32_t pc = func.cfg.blocks[blockIdx].start; pc <= func.cfg.blocks[blockIdx].end; pc++) {
@@ -71,6 +71,10 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
     InstructionUD insnUD = instructionUD(insn, opcode, dialect_raw);
     const ppc_opindex_t *opindex; // index into powerpc_operands array
     const struct powerpc_operand *operand;
+
+    std::cout << insnUD.inputs.size() << std::endl;
+    std::cout << insnUD.imms.size() << std::endl;
+    std::cout << insnUD.outputs.size() << std::endl;
     
     for (int i = 0; i < insnUD.imms.size(); i++) {
       VarNodePtr opVar = std::make_shared<ImmediateNode>(pc, i, insnUD.imms[i]);
@@ -118,12 +122,9 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
     }
   }
 
-  func.dfg.sinks.push_back(blockSinks);
-
   // If block DFA produced any changes, the block's successor need updating
   const FlowContextSizes postSizes = flowContext.getSizes();
   if (prevSizes != postSizes) {
-    for (int item : func.cfg.psTable[blockIdx].succ) {std::cout << item << " ";} std::cout << std::endl;
     for (auto successor : func.cfg.psTable[blockIdx].succ) {
       if (func.cfg.blocks[successor].blockType == INTERNAL && std::find(worklist.begin(), worklist.end(), successor) == worklist.end()) {
         worklist.insert(worklist.begin(), successor);

@@ -407,6 +407,23 @@ void appendCRRegister(std::vector<CpuMemoryLocation>& ops, int64_t reg) {
   }
 }
 
+bool isOperandRegister(const struct powerpc_operand *operand, int64_t value) {
+  if ((operand->flags & PPC_OPERAND_GPR) != 0
+      || ((operand->flags & PPC_OPERAND_GPR_0) != 0 && value != 0)) {
+    return true;
+  } else if ((operand->flags & PPC_OPERAND_FPR) != 0) {
+    return true;
+  } else if ((operand->flags & PPC_OPERAND_GQR) != 0) {
+    return true;
+  } else if ((operand->flags & PPC_OPERAND_CR_BIT) != 0) {
+    return true;
+  } else if ((operand->flags & PPC_OPERAND_SPR) != 0) {
+    return true;
+  } else if ((operand->flags & PPC_OPERAND_CR_REG) != 0) { // Create 4 inputs when an entire CR field is specified
+    return true;
+  } else return false;
+}
+
 void appendOperands(std::vector<CpuMemoryLocation>& ops, const struct powerpc_operand *operand, int64_t value) {
   if ((operand->flags & PPC_OPERAND_GPR) != 0
       || ((operand->flags & PPC_OPERAND_GPR_0) != 0 && value != 0)) {
@@ -465,7 +482,7 @@ void handleBranchUD(InstructionUD& insnUD, uint32_t insn, ppc_cpu_t dialect) {
       insnUD.outputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_CTR});
     } else if (((bo >> 2) & 0x7) == 5) {
       // branch always
-    } else throw std::runtime_error("Cuold not decode conditional branch BO field " + std::to_string(bo));
+    } else throw std::runtime_error("Could not decode conditional branch BO field " + std::to_string(bo));
 
     if (isBranchConditional(insn)) {
       int64_t value = operand_value_powerpc (BD, insn, dialect);
@@ -505,7 +522,7 @@ InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, 
     
     int64_t value = operand_value_powerpc (operand, insn, dialect);
 
-    if ((operand->flags & supported_register_types) != 0) { // register input
+    if (isOperandRegister(operand, value)) { // register input
       if (nonStoreInsn.contains(opcode->opcode) && registerInputCount == 0) {
         appendOperands(insnUD.outputs, operand, value);
       } else {
@@ -517,6 +534,7 @@ InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, 
       registerInputCount++;
     } else if (isImmediate(operand->flags, value)) { // immediate input
       insnUD.imms.push_back(value);
+    } else if (isIgnore(operand->flags)) { // ignore
     } else {
       throw std::runtime_error("unsupported operand, instruction " + std::string(opcode->name) + " operand index " + std::to_string(operand_idx));
     }

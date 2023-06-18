@@ -24,6 +24,8 @@ std::string getDotLabel(const ProgramLoaderPtr& programLoader, const Function& f
       return std::to_string(imm->value);
     } else if (RegisterNodePtr registerVar = dynamic_pointer_cast<RegisterNode>(var)) {
       return cpuMemorySpace2label(registerVar->cpuMemoryLocation);
+    } else if (PhiNodePtr phi = dynamic_pointer_cast<PhiNode>(var)) {
+      return "Φ";
     } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
   } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
 }
@@ -42,14 +44,18 @@ std::string getNodeId(const VarNodePtr& var) {
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
       return "imm_insn" + std::to_string(imm->index) + "op" + std::to_string(imm->index);
     } else if (RegisterNodePtr registerVar = dynamic_pointer_cast<RegisterNode>(var)) {
-      return "reg_insn" + std::to_string(imm->index) + "op" + std::to_string(imm->index);;
+      return "reg_insn" + std::to_string(imm->index) + "op" + std::to_string(imm->index);
+    } else if (PhiNodePtr phiVar = dynamic_pointer_cast<PhiNode>(var)) {
+      std::string id = "PHI_";
+      for (const auto& input : phiVar->inputs) id += getNodeId(input);
+      return id;
     } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
   } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
 }
 
 void outputNode(std::ostream& os, const ProgramLoaderPtr& programLoader, const Function& func, const VarNodePtr& var) {
   os << "  "; // indentation
-  os << getNodeId(var) << "[label=" + getDotLabel(programLoader, func, var) + "]" << ";\n";
+  os << getNodeId(var) << "[label=\"" + getDotLabel(programLoader, func, var) + "\"]" << ";\n";
 }
 
 void outputDfgDotRecurse(std::ostream& os, const ProgramLoaderPtr& programLoader, const Function& func, const VarNodePtr& var) {

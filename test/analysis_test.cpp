@@ -48,32 +48,7 @@ TEST(ControlFlowAnalysisTest, kartActionCalc) {
   }
 }
 
-/*void printNodeRecurse(ProgramLoaderPtr programLoader, const Function& func, VarnodePtr it) {
-  if (it->inputs.size() != 0) {
-    std::cout << it->label << ": ";
-    if (OperandNodePtr operandIn = dynamic_pointer_cast<OperandNode>(it)) {
-      // TODO: create assembly member to Function and create Disassembly analyzer
-      uint32_t* funcPtr = (uint32_t*) programLoader->getBufferAtLocation(func.location).value();
-      const uint32_t insn = be32(*(funcPtr + operandIn->index));
-      const struct powerpc_opcode* opcode = ppcdisasm::lookup_powerpc(insn, ppcdisasm::ppc_750cl_dialect);
-      std::cout << opcode->name;
-    } else if (PhinodePtr operandIn = dynamic_pointer_cast<Phinode>(it)) {
-      std::cout << "PHI";
-    }
-
-    std::cout << "(";
-    for (const auto& in : it->inputs) {
-      std::cout << in->label << ", ";
-    }
-    std::cout << ")" << std::endl;
-    for (const auto& in : it->inputs) {
-      printNodeRecurse(programLoader, func, in);
-    }
-  }
-
-}*/
-
-TEST(DataFlowAnalysisTest, kartActionCalc) {
+TEST(DataFlowAnalysisTest, quatmul) {
   filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
   // mkw binaries. TODO: test on more convenient binaries
   vector<filesystem::path> files {test_path / "main.dol", test_path / "StaticR.rel"};
@@ -91,11 +66,30 @@ TEST(DataFlowAnalysisTest, kartActionCalc) {
   
   DataFlowAnalysis dfa(testProject.programLoader);
   dfa.functionDFA(quatmul);
-  FlowContext& flowContext = quatmul.dfg.blockContexts[0];
-  //VarNodePtr outX = flowContext.fprs[0][0];
 
-  //std::cout << "f0 backwards flow" << std::endl;
-  //printNodeRecurse(testProject.programLoader, quatmul, outX);
   outputDfgDot(std::cout, testProject.programLoader, quatmul);
+  EXPECT_FALSE(true);
+}
+
+TEST(DataFlowAnalysisTest, canHop) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  // mkw binaries. TODO: test on more convenient binaries
+  vector<filesystem::path> files {test_path / "main.dol", test_path / "StaticR.rel"};
+
+  ProjectCreationOptions options;
+  options.projectName = "test_project";
+  options.programLoaderType = persistence::LOADER_RVL;
+  options.inputFiles = files;
+  options.projectFile= "./test.ppc2cpp";
+  Project testProject = Project::createProject(options);
+
+  Function kartActionCalc(testProject.programLoader->getLocation("StaticR.rel", ".text", 0x8057da18-0x805103b4).value(), 0x8057da5c-0x8057da18, "canHop");
+  ControlFlowAnalysis cfa(testProject.programLoader);
+  cfa.functionCFA(kartActionCalc);
+  
+  DataFlowAnalysis dfa(testProject.programLoader);
+  dfa.functionDFA(kartActionCalc);
+
+  outputDfgDot(std::cout, testProject.programLoader, kartActionCalc);
   EXPECT_FALSE(true);
 }
