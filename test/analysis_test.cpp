@@ -93,3 +93,26 @@ TEST(DataFlowAnalysisTest, canHop) {
   outputDfgDot(std::cout, testProject.programLoader, kartActionCalc);
   EXPECT_FALSE(true);
 }
+
+/*TEST(DataFlowAnalysisTest, canAirtimeHop) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  // mkw binaries. TODO: test on more convenient binaries
+  vector<filesystem::path> files {test_path / "main.dol", test_path / "StaticR.rel"};
+
+  ProjectCreationOptions options;
+  options.projectName = "test_project";
+  options.programLoaderType = persistence::LOADER_RVL;
+  options.inputFiles = files;
+  options.projectFile= "./test.ppc2cpp";
+  Project testProject = Project::createProject(options);
+
+  Function airtimeHop(testProject.programLoader->getLocation("StaticR.rel", ".text", 0x8057d888-0x805103b4).value(), 0x8057da18-0x8057d888, "canHop");
+  ControlFlowAnalysis cfa(testProject.programLoader);
+  cfa.functionCFA(airtimeHop);
+  
+  DataFlowAnalysis dfa(testProject.programLoader);
+  dfa.functionDFA(airtimeHop);
+
+  outputDfgDot(std::cout, testProject.programLoader, airtimeHop);
+  EXPECT_FALSE(true);
+}*/

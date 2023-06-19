@@ -24,6 +24,10 @@ public:
   // block type. start and end are only valid for INTERNAL BlockType
   BlockType blockType;
 
+  bool isExit = false;
+  bool endsInCall = false;
+  bool endsInTailCall = false;
+
   BasicBlock(uint32_t start) : start(start), end(start), blockType(INTERNAL) {}
   BasicBlock(uint32_t start, uint32_t end) : start(start), end(end), blockType(INTERNAL) {}
   BasicBlock(uint32_t start, uint32_t end, BlockType blockType) : start(start), end(end), blockType(blockType) {}
@@ -105,6 +109,13 @@ public:
 
     psTable[originBlockIdx].succ.push_back(fallthroughBlockIdx);
     psTable[fallthroughBlockIdx].pred.push_back(originBlockIdx);
+  }
+
+  bool hasExternalSuccessor(uint32_t blockIdx) {
+    for (auto successor : psTable[blockIdx].succ) {
+      if (blocks[successor].blockType != INTERNAL) return true;
+    }
+    return false;
   }
 };
 }

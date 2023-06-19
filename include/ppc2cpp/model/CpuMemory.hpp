@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <stdexcept>
 
 #define SPR_VALUE_LR 8
 #define SPR_VALUE_XER 1
@@ -26,6 +27,15 @@ class CpuMemoryLocation {
 public:
   CpuMemorySpace memspace;
   int64_t value;
+
+  struct HashFunction {
+    size_t operator()(const CpuMemoryLocation& loc) const {
+      size_t spaceHash = std::hash<CpuMemorySpace>()(loc.memspace);
+      size_t valHash = std::hash<int64_t>()(loc.value) << 1;
+      return spaceHash ^ valHash;
+    }
+  };
+  bool operator==(const CpuMemoryLocation& other) const = default;
 };
 
 inline std::string sprAlias(int64_t sprNum) {

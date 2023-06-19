@@ -48,15 +48,35 @@ public:
 typedef std::shared_ptr<OperandNode> OperandNodePtr;
 
 /**
- * Varnode that is used as an explicit operand in instructions
+ * Varnode that is tied to a register value at some point in the program
 */
-class RegisterNode : public OperandNode {
+class RegisterNode : public DataFlowNode {
 public:
   CpuMemoryLocation cpuMemoryLocation;
 
-  RegisterNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : OperandNode(index, opindex), cpuMemoryLocation(cpuMemoryLocation) {}
+  RegisterNode(uint32_t index, CpuMemoryLocation cpuMemoryLocation) : DataFlowNode(index), cpuMemoryLocation(cpuMemoryLocation) {}
 };
 typedef std::shared_ptr<RegisterNode> RegisterNodePtr;
+
+/**
+ * Varnode that is an input to a function (the function does not define it but uses it)
+*/
+class FunctionInputNode : public RegisterNode {
+public:
+  FunctionInputNode(uint32_t index, CpuMemoryLocation cpuMemoryLocation) : RegisterNode(index, cpuMemoryLocation) {}
+};
+typedef std::shared_ptr<FunctionInputNode> FunctionInputNodePtr;
+
+/**
+ * Varnode that is used as an explicit operand in instructions
+*/
+class RegisterOperandNode : public OperandNode {
+public:
+  CpuMemoryLocation cpuMemoryLocation;
+
+  RegisterOperandNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : OperandNode(index, opindex), cpuMemoryLocation(cpuMemoryLocation) {}
+};
+typedef std::shared_ptr<RegisterOperandNode> RegisterOperandNodePtr;
 
 /**
  * Varnode that represents an immediate
@@ -72,19 +92,19 @@ typedef std::shared_ptr<ImmediateNode> ImmediateNodePtr;
 /**
  * Varnode that is an input to the function (register is used before defined)
 */
-class InputRegisterNode : public RegisterNode {
+class InputRegisterNode : public RegisterOperandNode {
 public:
 
-  InputRegisterNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : RegisterNode(index, opindex, cpuMemoryLocation) {}
+  InputRegisterNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : RegisterOperandNode(index, opindex, cpuMemoryLocation) {}
 };
 typedef std::shared_ptr<InputRegisterNode> InputRegisterNodePtr;
 
 /**
  * Varnode that stems from an intermediate result of an instruction
 */
-class ResultNode : public RegisterNode {
+class ResultNode : public RegisterOperandNode {
 public:
-  ResultNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : RegisterNode(index, opindex, cpuMemoryLocation) {}
+  ResultNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : RegisterOperandNode(index, opindex, cpuMemoryLocation) {}
 };
 typedef std::shared_ptr<ResultNode> ResultNodePtr;
 
@@ -97,9 +117,9 @@ public:
 };
 typedef std::shared_ptr<SinkNode> SinkNodePtr;
 
-class PhiNode : public OperandNode {
+class PhiNode : public RegisterNode {
 public:
-  PhiNode(uint32_t index, uint32_t opindex) : OperandNode(index, opindex) {}
+  PhiNode(uint32_t index, CpuMemoryLocation cpuMemoryLocation) : RegisterNode(index, cpuMemoryLocation) {}
 };
 typedef std::shared_ptr<PhiNode> PhiNodePtr;
 }

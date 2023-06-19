@@ -25,26 +25,49 @@ void ControlFlowAnalysis::functionCFA(Function& func, uint32_t blockIdx) {
       int32_t branchVal = ppcdisasm::operand_value_powerpc(LI, insn, ppcdisasm::ppc_750cl_dialect);
       handleBranch(insn, blockIdx, func, pc, branchVal);
 
-      if (isLink(insn) && pc+1 < func.length()) { // control flow returns back after function call
+      if (isLink(insn)) { // control flow returns back after function call
+        assert(pc+1 < func.length() && "Branch with link cannot be the last instruction of a function (need to blr at the end)");
         int32_t maybeNewBlock = func.cfg.tryCreateSuccessorInternal(blockIdx, pc, pc + 1);
         if (maybeNewBlock >= 0) functionCFA(func, maybeNewBlock);
+        func.cfg.blocks[blockIdx].endsInCall = true;
+      } else if (pc+1 == func.length() && func.cfg.hasExternalSuccessor(blockIdx)) { // tail call
+        assert(isBranchConditionUnconditional(insn) && "Tail call with conditional branch? wtf");
+        func.cfg.blocks[blockIdx].endsInCall = true;
+        func.cfg.blocks[blockIdx].endsInTailCall = true;
+        func.cfg.blocks[blockIdx].isExit = true;
       }
       break;
     } else if (isBranchConditional(insn)) {
       int32_t branchVal = ppcdisasm::operand_value_powerpc(BD, insn, ppcdisasm::ppc_750cl_dialect);
       handleBranch(insn, blockIdx, func, pc, branchVal);
 
-      if ((isLink(insn) || !isBranchConditionUnconditional(insn)) && pc+1 < func.length()) {
+      if (isLink(insn) || !isBranchConditionUnconditional(insn)) {
+        assert(pc+1 < func.length() && "Branch with link cannot be the last instruction of a function (need to blr at the end)");
         int32_t maybeNewBlock = func.cfg.tryCreateSuccessorInternal(blockIdx, pc, pc + 1);
         if (maybeNewBlock >= 0) functionCFA(func, maybeNewBlock);
+        if (isLink(insn)) func.cfg.blocks[blockIdx].endsInCall = true;
+      } else if (!isLink(insn) && pc+1 == func.length() && func.cfg.hasExternalSuccessor(blockIdx)) { // cursed tail call
+        assert(isBranchConditionUnconditional(insn) && "Tail call with conditional branch? wtf");
+        func.cfg.blocks[blockIdx].endsInCall = true;
+        func.cfg.blocks[blockIdx].endsInTailCall = true;
+        func.cfg.blocks[blockIdx].isExit = true;
       }
       break;
     } else if (isBranchToLR(insn) || isBranchToCTR(insn)) {
       func.cfg.createSuccessorRuntime(blockIdx, pc);
 
-      if ((isLink(insn) || !isBranchConditionUnconditional(insn)) && pc+1 < func.length()) {
+      if (isLink(insn) || !isBranchConditionUnconditional(insn)) {
+        assert(pc+1 < func.length() && "Branch with link cannot be the last instruction of a function (need to blr at the end)");
         int32_t maybeNewBlock = func.cfg.tryCreateSuccessorInternal(blockIdx, pc, pc + 1);
         if (maybeNewBlock >= 0) functionCFA(func, maybeNewBlock);
+        if (isLink(insn)) func.cfg.blocks[blockIdx].endsInCall = true;
+      } else if (isBranchToLR(insn) && !isLink(insn) && isBranchConditionUnconditional(insn)) { // return
+        func.cfg.blocks[blockIdx].isExit = true;
+      } else if (!isLink(insn) && isBranchToCTR(insn) && pc+1 == func.length() && func.cfg.hasExternalSuccessor(blockIdx)) { // curseder tail call
+        assert(isBranchConditionUnconditional(insn) && "Tail call with conditional branch? wtf");
+        func.cfg.blocks[blockIdx].endsInCall = true;
+        func.cfg.blocks[blockIdx].endsInTailCall = true;
+        func.cfg.blocks[blockIdx].isExit = true;
       }
       break;
     }

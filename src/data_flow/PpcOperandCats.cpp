@@ -7,23 +7,6 @@
 
 namespace ppc2cpp {
 
-const std::unordered_set<int32_t> imm_operands = {
-  BD,
-  BDA,
-  BDM,
-  BDMA,
-  BDP,
-  BDPA,
-  BFF,
-  BO,
-  BOM,
-  BOP,
-  BH,
-  // not finished! Abandoned for isImmediate
-
-  D,
-};
-
 bool isImmediate(uint64_t operandFlags, int64_t operandValue) {
   if ((operandFlags & PPC_OPERAND_GPR_0) != 0 && operandValue == 0) return true;
 
@@ -39,56 +22,4 @@ bool isIgnore(uint64_t operandFlags) {
   if ((operandFlags & PPC_OPERAND_OPTIONAL32) != 0) return true;
   return false;
 }
-
-const std::unordered_set<int32_t> input_operands = {
-  // CR operands
-  BI,
-  BTAB,
-  BB,
-  BAB,
-  BFA,
-  CR,
-
-  // FPR operands
-  FRA,
-  FRB,
-  FRC,
-  FRS,
-  
-  // GPR operands
-  RA,
-  RA0,
-  RAQ,
-  PRA0,
-  PRAQ,
-  //RAM // lmw
-  RB,
-  RSB,
-  RBX,
-  RS,
-  // load with update
-  RAL,
-  RAS,
-
-  // PS operands
-  PSQ,
-  PSQM,
-};
-
-const std::unordered_set<int32_t> output_operands = {
-  // CR operands
-  BTAB,
-  BT,
-  BF,
-  OBF,
-  BTF,
-  
-  // FPR operands
-  FRT,
-  
-  // GPR operands
-  RT,
-  RAL,
-  RAS,
-};
 }

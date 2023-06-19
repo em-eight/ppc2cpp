@@ -6,6 +6,7 @@
 #include "ppc2cpp/data_flow/FlowContext.hpp"
 #include "ppc2cpp/data_flow/DataFlowAnalysis.hpp"
 #include "ppc2cpp/data_flow/PpcInstructionUD.hpp"
+#include "ppc2cpp/data_flow/PpcCallingConvention.hpp"
 
 using namespace ppc2cpp;
 using namespace ppcdisasm;
@@ -72,10 +73,6 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
     const ppc_opindex_t *opindex; // index into powerpc_operands array
     const struct powerpc_operand *operand;
 
-    std::cout << insnUD.inputs.size() << std::endl;
-    std::cout << insnUD.imms.size() << std::endl;
-    std::cout << insnUD.outputs.size() << std::endl;
-    
     for (int i = 0; i < insnUD.imms.size(); i++) {
       VarNodePtr opVar = std::make_shared<ImmediateNode>(pc, i, insnUD.imms[i]);
       insnInputs.push_back(opVar);
@@ -84,12 +81,12 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
     for (int i = 0; i < insnUD.inputs.size(); i++) {
       Definition& opVars = flowContext.getDefinition(insnUD.inputs[i]);
       if (opVars.empty()) { // register undefined, create new definition
-        VarNodePtr opVar = std::make_shared<InputRegisterNode>(pc, i, insnUD.inputs[i]);
+        VarNodePtr opVar = std::make_shared<FunctionInputNode>(pc, insnUD.inputs[i]);
         insnInputs.push_back(opVar);
       } else if (opVars.size() == 1) {
         insnInputs.insert(insnInputs.end(), opVars.begin(), opVars.end());
       } else { // multiple potential definitions from multiple basic blocks, create phi node
-        VarNodePtr opVar = std::make_shared<PhiNode>(pc, i);
+        VarNodePtr opVar = std::make_shared<PhiNode>(pc, insnUD.inputs[i]);
         opVar->inputs.insert(opVar->inputs.end(), opVars.begin(), opVars.end());
         insnInputs.push_back(opVar);
       }
@@ -112,17 +109,34 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
       blockSinks.push_back(sinkVar);
     } else if (isBranch(insn)) { // branches
       SinkNodePtr sinkVar = std::make_shared<SinkNode>(pc);
+
+      if (func.cfg.blocks[blockIdx].endsInCall) {
+        // use args
+        for (const CpuMemoryLocation& registerInput : callInputs) {
+          Definition& opVars = flowContext.getDefinition(registerInput);
+          if (opVars.empty()) { // register undefined, create new definition
+            //VarNodePtr opVar = std::make_shared<FunctionInputNode>(pc, registerInput);
+            //insnInputs.push_back(opVar);
+          } else if (opVars.size() == 1) {
+            insnInputs.insert(insnInputs.end(), opVars.begin(), opVars.end());
+          } else { // multiple potential definitions from multiple basic blocks, create phi node
+            VarNodePtr opVar = std::make_shared<PhiNode>(pc, registerInput);
+            opVar->inputs.insert(opVar->inputs.end(), opVars.begin(), opVars.end());
+            insnInputs.push_back(opVar);
+          }
+        }
+
+        // kill volatile (set to null)
+
+        // define return value
+      }
       sinkVar->inputs = insnInputs;
       blockSinks.push_back(sinkVar);
-      //if (func.cfg.isExitCall(blockIdx)) {
-        // Function calls get special treatment (input args must be set as uses, return values are defines etc etc)
-        // TODO!
-
-      //}
+      // TODO: exit block return value detection
     }
   }
 
-  // If block DFA produced any changes, the block's successor need updating
+  // If block DFA produced any changes, the block's successors need updating
   const FlowContextSizes postSizes = flowContext.getSizes();
   if (prevSizes != postSizes) {
     for (auto successor : func.cfg.psTable[blockIdx].succ) {

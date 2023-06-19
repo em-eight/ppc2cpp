@@ -22,7 +22,7 @@ std::string getDotLabel(const ProgramLoaderPtr& programLoader, const Function& f
       return opcode->name;
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
       return std::to_string(imm->value);
-    } else if (RegisterNodePtr registerVar = dynamic_pointer_cast<RegisterNode>(var)) {
+    } else if (FunctionInputNodePtr registerVar = dynamic_pointer_cast<FunctionInputNode>(var)) {
       return cpuMemorySpace2label(registerVar->cpuMemoryLocation);
     } else if (PhiNodePtr phi = dynamic_pointer_cast<PhiNode>(var)) {
       return "Φ";
@@ -43,8 +43,8 @@ std::string getNodeId(const VarNodePtr& var) {
       return "phi_insn" + std::to_string(phiIn->index) + "op" + std::to_string(phiIn->index);
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
       return "imm_insn" + std::to_string(imm->index) + "op" + std::to_string(imm->index);
-    } else if (RegisterNodePtr registerVar = dynamic_pointer_cast<RegisterNode>(var)) {
-      return "reg_insn" + std::to_string(imm->index) + "op" + std::to_string(imm->index);
+    } else if (FunctionInputNodePtr registerVar = dynamic_pointer_cast<FunctionInputNode>(var)) {
+      return "funcinput_insn" + std::to_string(registerVar->index) + cpuMemorySpace2label(registerVar->cpuMemoryLocation);
     } else if (PhiNodePtr phiVar = dynamic_pointer_cast<PhiNode>(var)) {
       std::string id = "PHI_";
       for (const auto& input : phiVar->inputs) id += getNodeId(input);

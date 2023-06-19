@@ -13,10 +13,10 @@ private:
 
   void initWorklist(const Function& func);
   void initWorklistRecurse(const Function& func, int blockIdx);
+  void functionDFAImpl(Function& func);
 
 public:
   DataFlowAnalysis(ProgramLoaderPtr programLoader) : programLoader(programLoader) {}
   void functionDFA(Function& func);
-  void functionDFAImpl(Function& func);
 };
 }
