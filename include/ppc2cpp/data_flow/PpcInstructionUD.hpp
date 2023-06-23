@@ -17,13 +17,13 @@ const uint64_t supported_register_types =
   PPC_OPERAND_SPR |
   PPC_OPERAND_GQR;
 
-extern const std::unordered_set<int32_t> fixedPointInsn;
-extern const std::unordered_set<int32_t> floatInsn;
-extern const std::unordered_set<int32_t> loadInsn;
-extern const std::unordered_set<int32_t> storeInsn;
-extern const std::unordered_set<int32_t> branchInsn;
-extern std::unordered_set<int32_t> nonStoreInsn;
-extern std::unordered_set<int32_t> supportedInsn;
+extern const std::unordered_set<uint64_t> fixedPointInsn;
+extern const std::unordered_set<uint64_t> floatInsn;
+extern const std::unordered_set<uint64_t> loadInsn;
+extern const std::unordered_set<uint64_t> storeInsn;
+extern const std::unordered_set<uint64_t> branchInsn;
+extern std::unordered_set<uint64_t> nonStoreInsn;
+extern std::unordered_set<uint64_t> supportedInsn;
 
 class InstructionUD {
 public:

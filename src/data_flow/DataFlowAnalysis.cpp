@@ -98,10 +98,6 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
       flowContext.setDefinition(insnUD.outputs[i], opVar);
     }
 
-    for (VarNodePtr output : insnOutputs) {
-      output->inputs = insnInputs;
-    }
-
     // keep track of sinks
     if (storeInsn.contains(opcode->opcode)) { // stores
       SinkNodePtr sinkVar = std::make_shared<SinkNode>(pc);
@@ -114,7 +110,9 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
         // use args
         for (const CpuMemoryLocation& registerInput : callInputs) {
           Definition& opVars = flowContext.getDefinition(registerInput);
-          if (opVars.empty()) { // register undefined, create new definition
+          // it is actually impossible to determine which parameters a function is using before analyzing it first.
+          // For now only mark the defined registers as used. It doesn't break quivalence checking anyways
+          if (opVars.empty()) { // register undefined. May still be a valid argument being bassed through from the caller's arguments
             //VarNodePtr opVar = std::make_shared<FunctionInputNode>(pc, registerInput);
             //insnInputs.push_back(opVar);
           } else if (opVars.size() == 1) {
@@ -127,13 +125,26 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
         }
 
         // kill volatile (set to null)
+        for (const CpuMemoryLocation& registerInput : killedByCall) {
+          flowContext.killDefinition(registerInput);
+        }
 
         // define return value
+        for (const CpuMemoryLocation& registerInput : definedByCall) {
+          VarNodePtr returnVar = std::make_shared<CallReturnNode>(pc, registerInput); // TODO: Create specialized return varnode?
+          insnOutputs.push_back(returnVar);
+          flowContext.setDefinition(registerInput, returnVar);
+        }
       }
       sinkVar->inputs = insnInputs;
       blockSinks.push_back(sinkVar);
-      // TODO: exit block return value detection
     }
+
+    for (VarNodePtr output : insnOutputs) {
+      output->inputs = insnInputs;
+    }
+      
+    // TODO: exit block return value detection
   }
 
   // If block DFA produced any changes, the block's successors need updating

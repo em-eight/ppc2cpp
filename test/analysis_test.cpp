@@ -116,3 +116,26 @@ TEST(DataFlowAnalysisTest, canHop) {
   outputDfgDot(std::cout, testProject.programLoader, airtimeHop);
   EXPECT_FALSE(true);
 }*/
+
+TEST(DataFlowAnalysisTest, seAngleAxis) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  // mkw binaries. TODO: test on more convenient binaries
+  vector<filesystem::path> files {test_path / "main.dol", test_path / "StaticR.rel"};
+
+  ProjectCreationOptions options;
+  options.projectName = "test_project";
+  options.programLoaderType = persistence::LOADER_RVL;
+  options.inputFiles = files;
+  options.projectFile= "./test.ppc2cpp";
+  Project testProject = Project::createProject(options);
+
+  Function setAngleAxis(testProject.programLoader->getLocation("main.dol", ".text2", 0x8023a0a0-0x800072c0).value(), 0x8023a138-0x8023a0a0, "setAngleAxis");
+  ControlFlowAnalysis cfa(testProject.programLoader);
+  cfa.functionCFA(setAngleAxis);
+  
+  DataFlowAnalysis dfa(testProject.programLoader);
+  dfa.functionDFA(setAngleAxis);
+
+  outputDfgDot(std::cout, testProject.programLoader, setAngleAxis);
+  EXPECT_FALSE(true);
+}

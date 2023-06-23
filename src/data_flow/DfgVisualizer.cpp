@@ -18,6 +18,8 @@ std::string getDotLabel(const ProgramLoaderPtr& programLoader, const Function& f
 
     if (ResultNodePtr regIn = dynamic_pointer_cast<ResultNode>(var)) {
       return opcode->name;
+    } else if (CallReturnNodePtr callOut = dynamic_pointer_cast<CallReturnNode>(var)) {
+      return "ret" + std::to_string(callOut->index) + cpuMemorySpace2label(callOut->cpuMemoryLocation);
     } else if (SinkNodePtr sink = dynamic_pointer_cast<SinkNode>(var)) {
       return opcode->name;
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
@@ -26,8 +28,8 @@ std::string getDotLabel(const ProgramLoaderPtr& programLoader, const Function& f
       return cpuMemorySpace2label(registerVar->cpuMemoryLocation);
     } else if (PhiNodePtr phi = dynamic_pointer_cast<PhiNode>(var)) {
       return "Φ";
-    } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
-  } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
+    } else throw std::runtime_error("Varnode type " + std::string(typeid(*var).name()) + " does not belong to a flow graph");
+  } else throw std::runtime_error("Varnode type " + std::string(typeid(*var).name()) + " does not belong to a flow graph");
 }
 
 // A string that uniquely identifies a node in a graph
@@ -37,8 +39,8 @@ std::string getNodeId(const VarNodePtr& var) {
       return "res_insn" + std::to_string(resVar->index) + "op" + std::to_string(resVar->index);
     } else if (SinkNodePtr sink = dynamic_pointer_cast<SinkNode>(var)) {
       return "sink_insn" + std::to_string(sink->index);
-    } else if (InputRegisterNodePtr regIn = dynamic_pointer_cast<InputRegisterNode>(var)) {
-      return "input_insn" + std::to_string(regIn->index) + "op" + std::to_string(regIn->index);
+    } else if (CallReturnNodePtr callOut = dynamic_pointer_cast<CallReturnNode>(var)) {
+      return "callret_insn" + std::to_string(callOut->index) + "op" + cpuMemorySpace2label(callOut->cpuMemoryLocation);
     } else if (PhiNodePtr phiIn = dynamic_pointer_cast<PhiNode>(var)) {
       return "phi_insn" + std::to_string(phiIn->index) + "op" + std::to_string(phiIn->index);
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
@@ -49,8 +51,8 @@ std::string getNodeId(const VarNodePtr& var) {
       std::string id = "PHI_";
       for (const auto& input : phiVar->inputs) id += getNodeId(input);
       return id;
-    } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
-  } else throw std::runtime_error("Varnode type " + std::string(typeid(var).name()) + " does not belong to a flow graph");
+    } else throw std::runtime_error("Varnode type " + std::string(typeid(*var).name()) + " does not belong to a flow graph");
+  } else throw std::runtime_error("Varnode type " + std::string(typeid(*var).name()) + " does not belong to a flow graph");
 }
 
 void outputNode(std::ostream& os, const ProgramLoaderPtr& programLoader, const Function& func, const VarNodePtr& var) {

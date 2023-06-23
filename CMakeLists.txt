@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 include(cmake/CPM.cmake)
 
 CPMAddPackage("gh:em-eight/ninutils#b877507806070d0393b3f8d89ea242885a0bbae2")
-CPMAddPackage("gh:em-eight/ppcdisasm-cpp#457dacd")
+CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
 
 # Proto stuff
 find_package(Protobuf REQUIRED)

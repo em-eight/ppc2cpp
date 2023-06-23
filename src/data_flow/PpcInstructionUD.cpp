@@ -1,5 +1,6 @@
 
 #include "ppcdisasm/ppc-forms.h"
+#include "ppcdisasm/ppcps-forms.h"
 #include "ppcdisasm/ppc-operands.h"
 
 #include "ppc2cpp/common/insn_properties.h"
@@ -11,7 +12,7 @@ namespace ppc2cpp {
 // ---- Instruction set partitioning -----
 // The following sets partition the supported PowerPC instruction set
 // PowerPC fixed point unit instruction
-const std::unordered_set<int32_t> fixedPointInsn {
+const std::unordered_set<uint64_t> fixedPointInsn {
  PPC_FORM_ADD ,
  PPC_FORM_ADD_ ,
  PPC_FORM_ADDC ,
@@ -151,7 +152,7 @@ const std::unordered_set<int32_t> fixedPointInsn {
 };
 
 // PowerPC floating point unit instruction
-const std::unordered_set<int32_t> floatInsn {
+const std::unordered_set<uint64_t> floatInsn {
  PPC_FORM_FABS_, 
  PPC_FORM_FABS, 
  PPC_FORM_FADD_, 
@@ -212,7 +213,7 @@ const std::unordered_set<int32_t> floatInsn {
  PPC_FORM_FSUBS, 
 };
 
-const std::unordered_set<int32_t> loadInsn {
+const std::unordered_set<uint64_t> loadInsn {
  PPC_FORM_LBZ, 
  PPC_FORM_LBZU, 
  PPC_FORM_LBZUX, 
@@ -243,9 +244,11 @@ const std::unordered_set<int32_t> loadInsn {
  PPC_FORM_LWZU, 
  PPC_FORM_LWZUX, 
  PPC_FORM_LWZX, 
+ 
+ PPCPS_FORM_PSQ_L, // only supported for stack saving
 };
 
-const std::unordered_set<int32_t> storeInsn {
+const std::unordered_set<uint64_t> storeInsn {
  PPC_FORM_STB, 
  PPC_FORM_STBU, 
  PPC_FORM_STBUX, 
@@ -273,9 +276,11 @@ const std::unordered_set<int32_t> storeInsn {
  PPC_FORM_STWU, 
  PPC_FORM_STWUX, 
  PPC_FORM_STWX, 
+
+ PPCPS_FORM_PSQ_ST, // only supported for stack saving
 };
 
-const std::unordered_set<int32_t> branchInsn {
+const std::unordered_set<uint64_t> branchInsn {
   PPC_FORM_B,
   PPC_FORM_BA,
   PPC_FORM_BC,
@@ -292,7 +297,7 @@ const std::unordered_set<int32_t> branchInsn {
 // ---- End of instruction set partitioning -----
 
 // Other sets here (setsXER, setsFPSCR, setsCR0 etc)
-const std::unordered_set<int32_t> setsCR0 {
+const std::unordered_set<uint64_t> setsCR0 {
  PPC_FORM_ADD_ ,
  PPC_FORM_ADDC_ ,
  PPC_FORM_ADDCO_ ,
@@ -356,7 +361,7 @@ const std::unordered_set<int32_t> setsCR0 {
  PPC_FORM_XOR_, 
 };
 
-const std::unordered_set<int32_t> setsCR1 {
+const std::unordered_set<uint64_t> setsCR1 {
  PPC_FORM_FABS_, 
  PPC_FORM_FADD_, 
  PPC_FORM_FADDS_, 
@@ -387,8 +392,8 @@ const std::unordered_set<int32_t> setsCR1 {
  PPC_FORM_FSUBS_, 
 };
 
-std::unordered_set<int32_t> nonStoreInsn;
-std::unordered_set<int32_t> supportedInsn;
+std::unordered_set<uint64_t> nonStoreInsn;
+std::unordered_set<uint64_t> supportedInsn;
 void initInstructionUD() {
   // all supported instructions minus store instructions. The first operand is input while the rest are outputs.
   // The only exception is load with update instructions, where RAL is also an output.

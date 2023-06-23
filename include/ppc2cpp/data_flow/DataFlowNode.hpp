@@ -90,14 +90,14 @@ public:
 typedef std::shared_ptr<ImmediateNode> ImmediateNodePtr;
 
 /**
- * Varnode that is an input to the function (register is used before defined)
+ * Varnode that is returned by a called function
 */
-class InputRegisterNode : public RegisterOperandNode {
+class CallReturnNode : public RegisterNode {
 public:
 
-  InputRegisterNode(uint32_t index, uint32_t opindex, CpuMemoryLocation cpuMemoryLocation) : RegisterOperandNode(index, opindex, cpuMemoryLocation) {}
+  CallReturnNode(uint32_t index, CpuMemoryLocation cpuMemoryLocation) : RegisterNode(index, cpuMemoryLocation) {}
 };
-typedef std::shared_ptr<InputRegisterNode> InputRegisterNodePtr;
+typedef std::shared_ptr<CallReturnNode> CallReturnNodePtr;
 
 /**
  * Varnode that stems from an intermediate result of an instruction

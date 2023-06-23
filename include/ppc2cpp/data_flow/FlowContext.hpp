@@ -136,5 +136,10 @@ public:
     def.clear();
     def.insert(var);
   }
+  
+  void killDefinition(const CpuMemoryLocation& cpuMemLoc) {
+    Definition& def = getDefinition(cpuMemLoc);
+    def.clear();
+  }
 };
 }
