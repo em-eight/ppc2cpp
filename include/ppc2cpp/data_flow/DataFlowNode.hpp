@@ -117,6 +117,14 @@ public:
 };
 typedef std::shared_ptr<SinkNode> SinkNodePtr;
 
+class ReturnNode : public SinkNode {
+public:
+  CpuMemoryLocation cpuMemoryLocation;
+
+  ReturnNode(uint32_t index, CpuMemoryLocation cpuMemoryLocation) : SinkNode(index), cpuMemoryLocation(cpuMemoryLocation) {}
+};
+typedef std::shared_ptr<ReturnNode> ReturnNodePtr;
+
 class PhiNode : public RegisterNode {
 public:
   PhiNode(uint32_t index, CpuMemoryLocation cpuMemoryLocation) : RegisterNode(index, cpuMemoryLocation) {}

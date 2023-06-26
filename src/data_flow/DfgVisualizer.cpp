@@ -20,6 +20,8 @@ std::string getDotLabel(const ProgramLoaderPtr& programLoader, const Function& f
       return opcode->name;
     } else if (CallReturnNodePtr callOut = dynamic_pointer_cast<CallReturnNode>(var)) {
       return "ret" + std::to_string(callOut->index) + cpuMemorySpace2label(callOut->cpuMemoryLocation);
+    } else if (ReturnNodePtr retVar = dynamic_pointer_cast<ReturnNode>(var)) {
+      return "return " + cpuMemorySpace2label(retVar->cpuMemoryLocation);
     } else if (SinkNodePtr sink = dynamic_pointer_cast<SinkNode>(var)) {
       return opcode->name;
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
@@ -37,6 +39,8 @@ std::string getNodeId(const VarNodePtr& var) {
   if (DataFlowNodePtr flowVar = dynamic_pointer_cast<DataFlowNode>(var)) {
     if (ResultNodePtr resVar = dynamic_pointer_cast<ResultNode>(var)) {
       return "res_insn" + std::to_string(resVar->index) + "op" + std::to_string(resVar->index);
+    } else if (ReturnNodePtr retVar = dynamic_pointer_cast<ReturnNode>(var)) {
+      return "return_" + cpuMemorySpace2label(retVar->cpuMemoryLocation);
     } else if (SinkNodePtr sink = dynamic_pointer_cast<SinkNode>(var)) {
       return "sink_insn" + std::to_string(sink->index);
     } else if (CallReturnNodePtr callOut = dynamic_pointer_cast<CallReturnNode>(var)) {

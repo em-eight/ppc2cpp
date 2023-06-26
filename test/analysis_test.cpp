@@ -68,7 +68,7 @@ TEST(DataFlowAnalysisTest, quatmul) {
   dfa.functionDFA(quatmul);
 
   outputDfgDot(std::cout, testProject.programLoader, quatmul);
-  EXPECT_FALSE(true);
+  //EXPECT_FALSE(true);
 }
 
 TEST(DataFlowAnalysisTest, canHop) {
@@ -91,10 +91,10 @@ TEST(DataFlowAnalysisTest, canHop) {
   dfa.functionDFA(kartActionCalc);
 
   outputDfgDot(std::cout, testProject.programLoader, kartActionCalc);
-  EXPECT_FALSE(true);
+  //EXPECT_FALSE(true);
 }
 
-/*TEST(DataFlowAnalysisTest, canAirtimeHop) {
+TEST(DataFlowAnalysisTest, canAirtimeHop) {
   filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
   // mkw binaries. TODO: test on more convenient binaries
   vector<filesystem::path> files {test_path / "main.dol", test_path / "StaticR.rel"};
@@ -115,7 +115,7 @@ TEST(DataFlowAnalysisTest, canHop) {
 
   outputDfgDot(std::cout, testProject.programLoader, airtimeHop);
   EXPECT_FALSE(true);
-}*/
+}
 
 TEST(DataFlowAnalysisTest, seAngleAxis) {
   filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
@@ -137,5 +137,5 @@ TEST(DataFlowAnalysisTest, seAngleAxis) {
   dfa.functionDFA(setAngleAxis);
 
   outputDfgDot(std::cout, testProject.programLoader, setAngleAxis);
-  EXPECT_FALSE(true);
+  //EXPECT_FALSE(true);
 }

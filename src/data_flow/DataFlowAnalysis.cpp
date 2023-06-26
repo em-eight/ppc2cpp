@@ -31,7 +31,7 @@ void DataFlowAnalysis::functionDFA(Function& func) {
   func.dfg.sinks.resize(func.cfg.blocks.size());
   disassemble_init_powerpc();
   initInstructionUD();
-  
+
   functionDFAImpl(func);
 }
 
@@ -143,8 +143,25 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
     for (VarNodePtr output : insnOutputs) {
       output->inputs = insnInputs;
     }
-      
-    // TODO: exit block return value detection
+  }
+   
+  // exit block return value detection
+  if (func.cfg.blocks[blockIdx].isExit) {
+    for (const CpuMemoryLocation& returnLoc : definedByCall) {
+      std::cout << "val " << returnLoc.value << std::endl;
+      const Definition& returnDef = flowContext.getDefinition(returnLoc);
+      if (returnDef.size() == 1) {
+        ReturnNodePtr returnNode = std::make_shared<ReturnNode>(func.length(), returnLoc);
+        returnNode->inputs.insert(returnNode->inputs.end(), returnDef.begin(), returnDef.end());
+        blockSinks.push_back(returnNode);
+      } else if (returnDef.size() > 1) { // multiple potential definitions from multiple basic blocks, create phi node
+        VarNodePtr opVar = std::make_shared<PhiNode>(func.length(), returnLoc);
+        opVar->inputs.insert(opVar->inputs.end(), returnDef.begin(), returnDef.end());
+        ReturnNodePtr returnNode = std::make_shared<ReturnNode>(func.length(), returnLoc);
+        returnNode->inputs.push_back(opVar);
+        blockSinks.push_back(returnNode);
+      }
+    }
   }
 
   // If block DFA produced any changes, the block's successors need updating
