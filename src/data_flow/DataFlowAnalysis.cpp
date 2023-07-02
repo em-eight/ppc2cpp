@@ -148,7 +148,6 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
   // exit block return value detection
   if (func.cfg.blocks[blockIdx].isExit) {
     for (const CpuMemoryLocation& returnLoc : definedByCall) {
-      std::cout << "val " << returnLoc.value << std::endl;
       const Definition& returnDef = flowContext.getDefinition(returnLoc);
       if (returnDef.size() == 1) {
         ReturnNodePtr returnNode = std::make_shared<ReturnNode>(func.length(), returnLoc);

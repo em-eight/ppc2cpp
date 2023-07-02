@@ -8,9 +8,10 @@
 
 namespace ppc2cpp {
 enum SymbolType {
+  // values match ELF symbol types
   NOTYPE = 0,
-  DATA,
-  FUNCTION
+  DATA = 1,
+  FUNCTION = 2
 };
 
 class Symbol {

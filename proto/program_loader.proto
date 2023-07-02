@@ -11,6 +11,7 @@ message ProgramLoaderBinary {
 enum ProgramLoaderType {
     LOADER_UNSPECIFIED = 0;
     LOADER_RVL = 1;
+    LOADER_ELF = 2;
 }
 
 // Program loader persistence

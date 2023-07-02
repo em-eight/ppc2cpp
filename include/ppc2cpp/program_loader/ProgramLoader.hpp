@@ -5,6 +5,8 @@
 #include <filesystem>
 
 #include "Binary.hpp"
+#include "ppc2cpp/model/SymbolTable.hpp"
+#include "ppc2cpp/model/RelocationTable.hpp"
 
 #include "program_loader.pb.h"
 
@@ -19,17 +21,25 @@ namespace ppc2cpp {
 */
 class ProgramLoader {
 public:
-  virtual ~ProgramLoader() { }
   std::vector<BinaryPtr> binaries;
+  SymbolTable symtab;
+  RelocationTable reloctab;
 
+  virtual ~ProgramLoader() { }
   // get a location by binary name, section name and offset
   virtual std::optional<ProgramLocation> getLocation(const std::string& binaryName, const std::string& sectionName, uint32_t offset);
   virtual std::optional<uint8_t*> getBufferAtLocation(const ProgramLocation&);
+  std::string locationString(const ProgramLocation&) const;
+  // If the given location refers to some other part of the program, return its location, else nullopt
   virtual std::optional<ProgramLocation> getReferenceAtLocation(const ProgramLocation&) = 0;
-  // 
+
+  // If the given location refers to some other part of the program, return its location, else nullopt. For now the same as above
+  // but uses given value if a relocation does not exist
   virtual std::optional<ProgramLocation> resolveTarget(const ProgramLocation& pc, int32_t value, bool isAbsolute);
   // get location of virtual memory address within the program's binaries, if it exists 
   virtual std::optional<ProgramLocation> resolveVMA(uint32_t vma);
+  // get definition of symbol name
+  virtual std::optional<ProgramLocation> resolveByName(const std::string& symname);
 
   // protobuf persistence
   persistence::ProgramLoaderType loaderType;

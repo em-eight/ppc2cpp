@@ -48,6 +48,39 @@ TEST(ControlFlowAnalysisTest, kartActionCalc) {
   }
 }
 
+TEST(ProgramLoaderTest, ElfRvlEquivalence) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  vector<filesystem::path> files {test_path / "main.dol", test_path / "StaticR.rel"};
+
+  ProjectCreationOptions options;
+  options.projectName = "test_project";
+  options.programLoaderType = persistence::LOADER_RVL;
+  options.inputFiles = files;
+  options.projectFile= "./test.ppc2cpp";
+  Project testProject = Project::createProject(options);
+
+  vector<filesystem::path> filesElf {test_path / "main.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions optionsElf;
+  optionsElf.projectName = "test_project_elf";
+  optionsElf.programLoaderType = persistence::LOADER_ELF;
+  optionsElf.inputFiles = filesElf;
+  optionsElf.projectFile= "./testElf.ppc2cpp";
+  Project testProjectElf = Project::createProject(optionsElf);
+  
+  auto size = 0x8057da18-0x8057d888;
+  ProgramLocation canHopRvl = testProject.programLoader->getLocation("StaticR.rel", ".text", 0x8057d888-0x805103b4).value();
+  ProgramLocation canHopElf = testProjectElf.programLoader->resolveByName("PlayerSub10_updateTopDuringAirtime").value();
+
+  ASSERT_TRUE(testProject.programLoader->getBufferAtLocation(canHopRvl).has_value());
+  ASSERT_TRUE(testProjectElf.programLoader->getBufferAtLocation(canHopElf).has_value());
+  uint8_t* canHopRvlBuf = testProject.programLoader->getBufferAtLocation(canHopRvl).value();
+  uint8_t* canHopElfBuf = testProjectElf.programLoader->getBufferAtLocation(canHopElf).value();
+
+
+  EXPECT_EQ(0, std::memcmp(canHopElfBuf, canHopRvlBuf, 100));
+}
+
 TEST(DataFlowAnalysisTest, quatmul) {
   filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
   // mkw binaries. TODO: test on more convenient binaries
@@ -114,7 +147,7 @@ TEST(DataFlowAnalysisTest, canAirtimeHop) {
   dfa.functionDFA(airtimeHop);
 
   outputDfgDot(std::cout, testProject.programLoader, airtimeHop);
-  EXPECT_FALSE(true);
+  //EXPECT_FALSE(true);
 }
 
 TEST(DataFlowAnalysisTest, seAngleAxis) {

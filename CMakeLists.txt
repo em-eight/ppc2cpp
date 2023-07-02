@@ -6,7 +6,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 include(cmake/CPM.cmake)
 
+# RVL binary parser
 CPMAddPackage("gh:em-eight/ninutils#b877507806070d0393b3f8d89ea242885a0bbae2")
+# ELF binary parser
+CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
+# disassebler
 CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
 
 # Proto stuff
@@ -39,7 +43,7 @@ target_include_directories(ppc2cpp_core PUBLIC
   $<INSTALL_INTERFACE:include>  # <prefix>/include
   ${PROTO_DEST}
 )
-target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm ${Protobuf_LIBRARY})
+target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm ${Protobuf_LIBRARY} elfio)
 
 add_executable(project_demo test/program_loader_demo.cpp)
 target_include_directories(project_demo PUBLIC

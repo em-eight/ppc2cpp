@@ -1,7 +1,10 @@
 
-#include "ppc2cpp/program_loader/ProgramLoader.hpp"
-#include "ppc2cpp/program_loader/NinProgramLoader.hpp"
+#include <format>
+
 #include "ppc2cpp/common/ProjectPersistenceException.hpp"
+#include "ppc2cpp/program_loader/NinProgramLoader.hpp"
+#include "ppc2cpp/program_loader/ElfProgramLoader.hpp"
+#include "ppc2cpp/program_loader/ProgramLoader.hpp"
 
 namespace ppc2cpp {
 std::optional<ProgramLocation> ProgramLoader::getLocation(const std::string& binaryName, const std::string& sectionName, uint32_t offset) {
@@ -67,6 +70,8 @@ ProgramLoaderPtr ProgramLoader::fromProto(const persistence::ProgramLoader* load
   ProgramLoaderPtr programLoader;
   if (loaderType == persistence::LOADER_RVL) {
     programLoader = std::make_shared<NinProgramLoader>(NinProgramLoader(loaderProto->binaries()));
+  } else if (loaderType == persistence::LOADER_ELF) {
+    programLoader = std::make_shared<ElfProgramLoader>(ElfProgramLoader(loaderProto->binaries()));
   } else {
     throw new ProjectPersistenceException("Unknown program loader type " + loaderType);
   }
@@ -75,4 +80,14 @@ ProgramLoaderPtr ProgramLoader::fromProto(const persistence::ProgramLoader* load
   return programLoader;
 }
 
+std::optional<ProgramLocation> ProgramLoader::resolveByName(const std::string& name) {
+  const auto& maybeSymbol = this->symtab.lookupByName(name);
+  if (maybeSymbol) return maybeSymbol->location;
+  else return std::nullopt;
+}
+
+std::string ProgramLoader::locationString(const ProgramLocation& loc) const {
+  return "{" + this->binaries[loc.binary_idx]->name + ", " + 
+    this->binaries[loc.binary_idx]->sections[loc.section_idx]->name + ", " + std::format("0x{:x}", loc.section_offset) + "}";
+}
 }

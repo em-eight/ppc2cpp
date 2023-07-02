@@ -10,6 +10,8 @@ public:
   int32_t section_idx;
   uint32_t section_offset;
 
+  BinaryLocation() = default;
+
   BinaryLocation(int32_t section_idx, uint32_t section_offset) : section_idx(section_idx), section_offset(section_offset) {}
   bool operator==(const BinaryLocation& other) const { return section_idx == other.section_idx && section_offset == other.section_offset; }
   BinaryLocation& operator+=(const int32_t& rhs) {
