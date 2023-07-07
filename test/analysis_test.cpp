@@ -14,6 +14,7 @@
 #include "ppc2cpp/control_flow/ControlFlowAnalysis.hpp"
 #include "ppc2cpp/data_flow/DataFlowAnalysis.hpp"
 #include "ppc2cpp/data_flow/FlowContext.hpp"
+#include "ppc2cpp/analysis/ProgramComparator.hpp"
 
 #include "test_helper.h"
 
@@ -68,17 +69,103 @@ TEST(ProgramLoaderTest, ElfRvlEquivalence) {
   optionsElf.projectFile= "./testElf.ppc2cpp";
   Project testProjectElf = Project::createProject(optionsElf);
   
-  auto size = 0x8057da18-0x8057d888;
-  ProgramLocation canHopRvl = testProject.programLoader->getLocation("StaticR.rel", ".text", 0x8057d888-0x805103b4).value();
-  ProgramLocation canHopElf = testProjectElf.programLoader->resolveByName("PlayerSub10_updateTopDuringAirtime").value();
+  auto size = 0x8023a5c4-0x8023a540;
+  ProgramLocation quatmulRvl = testProject.programLoader->getLocation("main.dol", ".text2", 0x8023a540-0x800072c0).value();
+  ProgramLocation quatmulElf = testProjectElf.programLoader->resolveByName("__ml__3EGGFRCQ23EGG5QuatfRCQ23EGG8Vector3f").value();
 
-  ASSERT_TRUE(testProject.programLoader->getBufferAtLocation(canHopRvl).has_value());
-  ASSERT_TRUE(testProjectElf.programLoader->getBufferAtLocation(canHopElf).has_value());
-  uint8_t* canHopRvlBuf = testProject.programLoader->getBufferAtLocation(canHopRvl).value();
-  uint8_t* canHopElfBuf = testProjectElf.programLoader->getBufferAtLocation(canHopElf).value();
+  ASSERT_TRUE(testProject.programLoader->getBufferAtLocation(quatmulRvl).has_value());
+  ASSERT_TRUE(testProjectElf.programLoader->getBufferAtLocation(quatmulElf).has_value());
+  uint8_t* quatmulRvlBuf = testProject.programLoader->getBufferAtLocation(quatmulRvl).value();
+  uint8_t* quatmulElfBuf = testProjectElf.programLoader->getBufferAtLocation(quatmulElf).value();
 
 
-  EXPECT_EQ(0, std::memcmp(canHopElfBuf, canHopRvlBuf, 100));
+  EXPECT_EQ(0, std::memcmp(quatmulElfBuf, quatmulRvlBuf, size));
+}
+
+TEST(DataFlowAnalysisTest, FunctionEquivalence) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  vector<filesystem::path> files1 {test_path / "main.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions options1;
+  options1.projectName = "test_project1";
+  options1.programLoaderType = persistence::LOADER_ELF;
+  options1.inputFiles = files1;
+  options1.projectFile= "./test1.ppc2cpp";
+  Project testProject1 = Project::createProject(options1);
+
+  vector<filesystem::path> files2 {test_path / "main2.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions options2;
+  options2.projectName = "test_project2";
+  options2.programLoaderType = persistence::LOADER_ELF;
+  options2.inputFiles = files2;
+  options2.projectFile= "./test2.ppc2cpp";
+  Project testProject2 = Project::createProject(options2);
+  
+  auto size = 0x80239f58-0x80239e10;
+  ProgramLocation setRPY1loc = testProject1.programLoader->resolveByName("setRPY__Q23EGG5QuatfFRCQ23EGG8Vector3f").value();
+  ProgramLocation setRPY2loc = testProject2.programLoader->resolveByName("setRPY__Q23EGG5QuatfFRCQ23EGG8Vector3f").value();
+
+  ASSERT_TRUE(testProject1.programLoader->getBufferAtLocation(setRPY1loc).has_value());
+  ASSERT_TRUE(testProject2.programLoader->getBufferAtLocation(setRPY2loc).has_value());
+
+  Function setRPY1(setRPY1loc, size, "setRPY");
+  ControlFlowAnalysis cfa1(testProject1.programLoader);
+  cfa1.functionCFA(setRPY1);
+  DataFlowAnalysis dfa1(testProject1.programLoader);
+  dfa1.functionDFA(setRPY1);
+  Function setRPY2(setRPY2loc, size, "setRPY");
+  ControlFlowAnalysis cfa2(testProject2.programLoader);
+  cfa2.functionCFA(setRPY2);
+  DataFlowAnalysis dfa2(testProject2.programLoader);
+  dfa2.functionDFA(setRPY2);
+
+  ProgramComparator programComparator(testProject1.programLoader, testProject2.programLoader);
+  bool areEquivalent = programComparator.compareFunctionFlows(setRPY1, setRPY2);
+}
+
+TEST(DataFlowAnalysisTest, FunctionEquivalenceSqNorm) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  vector<filesystem::path> files1 {test_path / "main.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions options1;
+  options1.projectName = "test_project1";
+  options1.programLoaderType = persistence::LOADER_ELF;
+  options1.inputFiles = files1;
+  options1.projectFile= "./test1.ppc2cpp";
+  Project testProject1 = Project::createProject(options1);
+
+  vector<filesystem::path> files2 {test_path / "main2.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions options2;
+  options2.projectName = "test_project2";
+  options2.programLoaderType = persistence::LOADER_ELF;
+  options2.inputFiles = files2;
+  options2.projectFile= "./test2.ppc2cpp";
+  Project testProject2 = Project::createProject(options2);
+  
+  auto size = 0x8023a168-0x8023a138;
+  ProgramLocation sqNorm1loc = testProject1.programLoader->resolveByName("squareNorm__Q23EGG5QuatfFv").value();
+  ProgramLocation sqNorm2loc = testProject2.programLoader->resolveByName("squareNorm__Q23EGG5QuatfFv").value();
+
+  ASSERT_TRUE(testProject1.programLoader->getBufferAtLocation(sqNorm1loc).has_value());
+  ASSERT_TRUE(testProject2.programLoader->getBufferAtLocation(sqNorm2loc).has_value());
+
+  Function sqNorm1(sqNorm1loc, size, "sqNorm");
+  ControlFlowAnalysis cfa1(testProject1.programLoader);
+  cfa1.functionCFA(sqNorm1);
+  DataFlowAnalysis dfa1(testProject1.programLoader);
+  dfa1.functionDFA(sqNorm1);
+  Function sqNorm2(sqNorm2loc, size, "sqNorm");
+  ControlFlowAnalysis cfa2(testProject2.programLoader);
+  cfa2.functionCFA(sqNorm2);
+  DataFlowAnalysis dfa2(testProject2.programLoader);
+  dfa2.functionDFA(sqNorm2);
+
+  ProgramComparator programComparator(testProject1.programLoader, testProject2.programLoader);
+  bool areEquivalent = programComparator.compareFunctionFlows(sqNorm1, sqNorm2);
+
+  EXPECT_TRUE(areEquivalent);
 }
 
 TEST(DataFlowAnalysisTest, quatmul) {
@@ -99,9 +186,6 @@ TEST(DataFlowAnalysisTest, quatmul) {
   
   DataFlowAnalysis dfa(testProject.programLoader);
   dfa.functionDFA(quatmul);
-
-  outputDfgDot(std::cout, testProject.programLoader, quatmul);
-  //EXPECT_FALSE(true);
 }
 
 TEST(DataFlowAnalysisTest, canHop) {
@@ -123,7 +207,7 @@ TEST(DataFlowAnalysisTest, canHop) {
   DataFlowAnalysis dfa(testProject.programLoader);
   dfa.functionDFA(kartActionCalc);
 
-  outputDfgDot(std::cout, testProject.programLoader, kartActionCalc);
+  //outputDfgDot(std::cout, testProject.programLoader, kartActionCalc);
   //EXPECT_FALSE(true);
 }
 
@@ -146,7 +230,7 @@ TEST(DataFlowAnalysisTest, canAirtimeHop) {
   DataFlowAnalysis dfa(testProject.programLoader);
   dfa.functionDFA(airtimeHop);
 
-  outputDfgDot(std::cout, testProject.programLoader, airtimeHop);
+  //outputDfgDot(std::cout, testProject.programLoader, airtimeHop);
   //EXPECT_FALSE(true);
 }
 
@@ -169,6 +253,6 @@ TEST(DataFlowAnalysisTest, seAngleAxis) {
   DataFlowAnalysis dfa(testProject.programLoader);
   dfa.functionDFA(setAngleAxis);
 
-  outputDfgDot(std::cout, testProject.programLoader, setAngleAxis);
+  //outputDfgDot(std::cout, testProject.programLoader, setAngleAxis);
   //EXPECT_FALSE(true);
 }

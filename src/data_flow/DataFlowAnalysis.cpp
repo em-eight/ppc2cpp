@@ -131,7 +131,7 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
 
         // define return value
         for (const CpuMemoryLocation& registerInput : definedByCall) {
-          VarNodePtr returnVar = std::make_shared<CallReturnNode>(pc, registerInput); // TODO: Create specialized return varnode?
+          VarNodePtr returnVar = std::make_shared<CallReturnNode>(pc, registerInput);
           insnOutputs.push_back(returnVar);
           flowContext.setDefinition(registerInput, returnVar);
         }

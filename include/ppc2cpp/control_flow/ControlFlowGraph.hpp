@@ -51,6 +51,13 @@ public:
     blocks.emplace_back(0);
     psTable.push_back(PSEntry());
   }
+  // finds the index of the block an instruction belongs to
+  int32_t findBlockByInsnIdx(uint32_t idx) const {
+    for (uint32_t i = 0; i < blocks.size(); i++) {
+      if (blocks[i].start <= idx && idx < blocks[i].end) return i;
+    }
+    return -1;
+  }
   
   // checks if block exists and returns index, if not found, return -1
   int32_t findBlockByPosition(uint32_t branchTarget, BlockType blockType) const {
