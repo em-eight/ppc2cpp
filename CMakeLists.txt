@@ -14,9 +14,7 @@ CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
 
 # Proto stuff
-find_package(Protobuf REQUIRED)
-
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS proto/program_loader.proto)
+find_package(protobuf CONFIG REQUIRED)
 
 set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/*.proto")
@@ -43,7 +41,7 @@ target_include_directories(ppc2cpp_core PUBLIC
   $<INSTALL_INTERFACE:include>  # <prefix>/include
   ${PROTO_DEST}
 )
-target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm ${Protobuf_LIBRARY} elfio)
+target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm protobuf::libprotobuf elfio)
 
 add_executable(project_demo test/program_loader_demo.cpp)
 target_include_directories(project_demo PUBLIC

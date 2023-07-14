@@ -163,9 +163,8 @@ TEST(DataFlowAnalysisTest, FunctionEquivalenceSqNorm) {
   dfa2.functionDFA(sqNorm2);
 
   ProgramComparator programComparator(testProject1.programLoader, testProject2.programLoader);
-  bool areEquivalent = programComparator.compareFunctionFlows(sqNorm1, sqNorm2);
 
-  EXPECT_TRUE(areEquivalent);
+  EXPECT_TRUE(programComparator.compareFunctionFlows(sqNorm1, sqNorm2));
 }
 
 TEST(DataFlowAnalysisTest, quatmul) {
