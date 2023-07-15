@@ -10,7 +10,7 @@ ElfSection::ElfSection(const ELFIO::section* elfsec) {
   this->length = elfsec->get_size();
   this->address = elfsec->get_address();
   this->_data = (uint8_t*) elfsec->get_data();
-  if ((elfsec->get_flags() & SHF_ALLOC) != 0) {
+  if ((elfsec->get_flags() & SHF_ALLOC) == 0) {
     this->type = SECTION_TYPE_NOLOAD;
   } else {
     this->type = elfsec->get_type() == SHT_NOBITS ? SECTION_TYPE_BSS : (((elfsec->get_flags() & SHF_EXECINSTR) != 0) ? SECTION_TYPE_TEXT : SECTION_TYPE_DATA);

@@ -78,7 +78,6 @@ TEST(ProgramLoaderTest, ElfRvlEquivalence) {
   uint8_t* quatmulRvlBuf = testProject.programLoader->getBufferAtLocation(quatmulRvl).value();
   uint8_t* quatmulElfBuf = testProjectElf.programLoader->getBufferAtLocation(quatmulElf).value();
 
-
   EXPECT_EQ(0, std::memcmp(quatmulElfBuf, quatmulRvlBuf, size));
 }
 
@@ -121,7 +120,7 @@ TEST(DataFlowAnalysisTest, FunctionEquivalence) {
   dfa2.functionDFA(setRPY2);
 
   ProgramComparator programComparator(testProject1.programLoader, testProject2.programLoader);
-  bool areEquivalent = programComparator.compareFunctionFlows(setRPY1, setRPY2);
+  EXPECT_TRUE(programComparator.compareFunctionFlows(setRPY1, setRPY2));
 }
 
 TEST(DataFlowAnalysisTest, FunctionEquivalenceSqNorm) {
@@ -165,6 +164,31 @@ TEST(DataFlowAnalysisTest, FunctionEquivalenceSqNorm) {
   ProgramComparator programComparator(testProject1.programLoader, testProject2.programLoader);
 
   EXPECT_TRUE(programComparator.compareFunctionFlows(sqNorm1, sqNorm2));
+}
+
+TEST(ProgramComparatorTest, ElfProgramComparison) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  vector<filesystem::path> files1 {test_path / "main.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions options1;
+  options1.projectName = "test_project1";
+  options1.programLoaderType = persistence::LOADER_ELF;
+  options1.inputFiles = files1;
+  options1.projectFile= "./test1.ppc2cpp";
+  Project testProject1 = Project::createProject(options1);
+
+  vector<filesystem::path> files2 {test_path / "main.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions options2;
+  options2.projectName = "test_project2";
+  options2.programLoaderType = persistence::LOADER_ELF;
+  options2.inputFiles = files2;
+  options2.projectFile= "./test2.ppc2cpp";
+  Project testProject2 = Project::createProject(options2);
+  
+  ProgramComparator programComparator(testProject1.programLoader, testProject2.programLoader);
+
+  EXPECT_TRUE(programComparator.comparePrograms());
 }
 
 TEST(DataFlowAnalysisTest, quatmul) {

@@ -20,6 +20,6 @@ public:
   void push_back(const Relocation& sym) { relocs.push_back(sym); }
   // prepares _source_index
   void constructSourceIndex();
-  std::optional<Relocation> lookupBySource(const ProgramLocation& name) const;
+  std::optional<Relocation> lookupBySource(const ProgramLocation& loc) const;
 };
 }

@@ -1,7 +1,10 @@
 
+#include <format>
+
 #include "ppcdisasm/ppc-dis.hpp"
 
 #include "ppc2cpp/common/endian.h"
+#include "ppc2cpp/common/common.h"
 #include "ppc2cpp/analysis/ProgramComparator.hpp"
 
 using namespace ppcdisasm;
@@ -143,6 +146,88 @@ bool ProgramComparator::compareFunctionFlows(const Function& func1, const Functi
     return false;
   }
 
+  return true;
+}
+
+bool ProgramComparator::compareSymbols(const Symbol& sourceSym, const Symbol& targetSym) {
+  ProgramLocation loc2 = targetSym.location;
+  ProgramLocation loc1 = sourceSym.location;
+
+  if (sourceSym.size != targetSym.size) {
+    std::cout << targetSym.name << ": Target symbol size " << targetSym.size << " != " << sourceSym.size << "\n";
+    return false;
+  }
+
+  std::optional<uint8_t*> buf1 = pLoader1->getBufferAtLocation(loc1);
+  ASSERT(buf1.has_value(), ("Failed to get buffer to symbol " + targetSym.name + " at " + pLoader1->locationString(loc1)));
+  std::optional<uint8_t*> buf2 = pLoader2->getBufferAtLocation(loc2);
+  ASSERT(buf2.has_value(), ("Failed to get buffer to symbol " + targetSym.name + " at " + pLoader2->locationString(loc2)));
+
+  BinarySection::Type symSectionType2 = pLoader2->binaries[loc2.binary_idx]->sections[loc2.section_idx]->getType();
+  BinarySection::Type symSectionType1 = pLoader1->binaries[loc1.binary_idx]->sections[loc1.section_idx]->getType();
+  if (symSectionType1 != symSectionType2) {
+    std::cout << targetSym.name << ": symbol is placed sections of different type\n";
+    return false;
+  }
+
+  // TODO: Also support data flow equivalence some day
+  if (symSectionType1 != BinarySection::Type::SECTION_TYPE_BSS && std::memcmp(buf1.value(), buf2.value(), targetSym.size) != 0) {
+    std::cout << targetSym.name << ": byte mismatch\n";
+    // TODO: print what is wrong or sth
+    return false;
+  }
+
+  // relocations inside symbol must match
+  for (int off = 0; off < targetSym.size; off++) {
+    ProgramLocation pos2 = loc2 + off;
+    ProgramLocation pos1 = loc1 + off;
+    std::optional<Relocation> maybeReloc2 = pLoader2->reloctab.lookupBySource(pos2);
+    std::optional<Relocation> maybeReloc1 = pLoader2->reloctab.lookupBySource(pos1);
+
+    if (maybeReloc1.has_value() != maybeReloc2.has_value()) {
+      std::cout << targetSym.name << "+" << std::format("0x{:x}", off) << ", not both programs have relocation, source: " <<
+        maybeReloc1.has_value() << " != target: " << maybeReloc2.has_value() << "\n";
+      return false;
+    }
+
+    if (maybeReloc2.has_value()) {
+      std::optional<Symbol> maybeRelocSym1 = pLoader1->symtab.lookupByLocation(maybeReloc1->destination);
+      std::optional<Symbol> maybeRelocSym2 = pLoader2->symtab.lookupByLocation(maybeReloc2->destination);
+
+      ASSERT(maybeReloc1.has_value(), "Source: could not find symbol referenced by relocation at " + pLoader1->locationString(maybeReloc1->source)
+        + ", destination " + pLoader1->locationString(maybeReloc1->destination));
+      ASSERT(maybeReloc2.has_value(), "Target: could not find symbol referenced by relocation at " + pLoader2->locationString(maybeReloc2->source)
+        + ", destination " + pLoader2->locationString(maybeReloc2->destination));
+
+      if (maybeRelocSym1->name != maybeRelocSym2->name) {
+        std::cout << targetSym.name << "+" << std::format("0x{:x}", off) << "Referenced symbol mismatch, " <<
+          maybeRelocSym1->name << " != " << maybeRelocSym2->name;
+        return false;
+      }
+
+      if (maybeRelocSym1->symbolBinding == SymbolBinding::LOCAL || maybeRelocSym2->symbolBinding == SymbolBinding::LOCAL) {
+        // for local symbols, also check recurse symbol equivalence because they are not contained in the symbols indexed by name
+        if (!compareSymbols(maybeRelocSym1.value(), maybeRelocSym2.value())) return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool ProgramComparator::comparePrograms() {
+  for (int i = 0; i < pLoader2->symtab.num_symbols(); i++) {
+    const Symbol& targetSym = pLoader2->symtab[i];
+    if (targetSym.symbolBinding == SymbolBinding::LOCAL) continue; // leave local symbol comparison for later
+    std::optional<Symbol> maybeSourceSym = pLoader1->symtab.lookupByName(targetSym.name);
+    if (!maybeSourceSym) {
+      std::cout << "Expected symbol " << targetSym.name << " in location " << pLoader2->locationString(targetSym.location) <<
+        " that exists in target program, to also exist in source program\n";
+      return false;
+    }
+
+    if (!compareSymbols(*maybeSourceSym, targetSym)) return false;
+  }
   return true;
 }
 }

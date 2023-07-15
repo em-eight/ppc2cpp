@@ -1,21 +1,9 @@
 
 #include <format>
 
+#include "ppc2cpp/common/common.h"
 #include "ppc2cpp/program_loader/ElfBinary.hpp"
 #include "ppc2cpp/program_loader/ElfProgramLoader.hpp"
-
-#ifndef NDEBUG
-#   define ASSERT(condition, message) \
-    do { \
-        if (! (condition)) { \
-            std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
-                      << " line " << __LINE__ << ": " << message << std::endl; \
-            std::terminate(); \
-        } \
-    } while (false)
-#else
-#   define ASSERT(condition, message) do { } while (false)
-#endif
 
 
 using namespace ELFIO;
@@ -36,6 +24,7 @@ ElfProgramLoader::ElfProgramLoader(const ::google::protobuf::RepeatedPtrField<pe
   }
 
   this->symtab.constructNameIndex();
+  this->symtab.constructLocationIndex();
 
   for (int i = 0; i < this->binaries.size(); i++) {
     const auto& binary = static_pointer_cast<ElfBinary>(this->binaries[i]);
@@ -43,6 +32,16 @@ ElfProgramLoader::ElfProgramLoader(const ::google::protobuf::RepeatedPtrField<pe
   }
 
   this->reloctab.constructSourceIndex();
+}
+
+ProgramLocation ElfProgramLoader::getElfSymbolLocation(int binaryIdx, Elf_Half section_index, Elf64_Addr value, bool interpretSymValueAsAddr) {
+  if (interpretSymValueAsAddr || section_index == SHN_ABS) {
+    auto maybeSymLoc = this->resolveVMA(value);
+    ASSERT(maybeSymLoc.has_value(), ("Could not resolve symbol at address " + std::format("0x{:x}", value)));
+    return maybeSymLoc.value();
+  } else {
+    return ProgramLocation(binaryIdx, section_index, value);
+  }
 }
 
 void ElfProgramLoader::registerSymbols(std::shared_ptr<elfio> elfPtr, int binaryIdx) {
@@ -64,22 +63,16 @@ void ElfProgramLoader::registerSymbols(std::shared_ptr<elfio> elfPtr, int binary
         symbols.get_symbol( j, name, value, size, bind, type, section_index, other );
 
         if (section_index != SHN_UNDEF && (section_index == SHN_ABS || section_index < SHN_LORESERVE) && (type == STT_OBJECT || type == STT_FUNC || type == STT_NOTYPE)) {
-          ProgramLocation symLocation;
-          if (interpretSymValueAsAddr || section_index == SHN_ABS) {
-            auto maybeSymLoc = this->resolveVMA(value);
-            ASSERT(maybeSymLoc.has_value(), ("Could not resolve symbol at address " + std::format("0x{:x}", value)));
-            symLocation = maybeSymLoc.value();
-          } else {
-            symLocation = ProgramLocation(binaryIdx, section_index, value);
-          }
-          this->symtab.push_back(Symbol(symLocation, size, name, static_cast<SymbolType>(type)));
+          ProgramLocation symLocation = getElfSymbolLocation(binaryIdx, section_index, value, interpretSymValueAsAddr);
+          this->symtab.push_back(Symbol(symLocation, size, name, static_cast<SymbolType>(type), static_cast<SymbolBinding>(bind)));
         }
       }
     }
   }
 }
 
-std::string getElfSymName(const symbol_section_accessor& accessor, int sym_idx) {
+ProgramLocation ElfProgramLoader::getElfRelocDest(const symbol_section_accessor& accessor, int sym_idx, int binaryIdx,
+    const ProgramLocation& relocSource, bool interpretSymValueAsAddr) {
   std::string name;
   Elf64_Addr value;
   Elf_Xword size;
@@ -88,10 +81,18 @@ std::string getElfSymName(const symbol_section_accessor& accessor, int sym_idx) 
   Elf_Half section_index;
   unsigned char other;
   accessor.get_symbol( sym_idx, name, value, size, bind, type, section_index, other );
-  return name;
+  if (section_index != SHN_UNDEF) {
+    return this->getElfSymbolLocation(binaryIdx, section_index, value, interpretSymValueAsAddr);
+  } else {
+    auto symLoc = this->resolveByName(name);
+    ASSERT(symLoc.has_value(), ("Could not resolve relocation target with name " + name + " at " + this->locationString(relocSource)));
+    return symLoc.value();
+  }
 }
 
 void ElfProgramLoader::registerRelocations(std::shared_ptr<elfio> elfPtr, int binaryIdx) {
+  bool interpretSymValueAsAddr = elfPtr->get_type() != ET_REL;
+
   for ( int i = 0; i < elfPtr->sections.size(); ++i ) {
     const section* psec = elfPtr->sections[i];
 
@@ -111,10 +112,7 @@ void ElfProgramLoader::registerRelocations(std::shared_ptr<elfio> elfPtr, int bi
 
         relocs.get_entry(j, offset, symbol_idx, type, addend);
         ProgramLocation relocSource = { binaryIdx, rel_sec_idx, static_cast<uint32_t>(offset) };
-        std::string symName = getElfSymName(relsymbols, symbol_idx); // should be faster to get symbol name directly from string table
-        auto symLoc = this->resolveByName(symName);
-        ASSERT(symLoc.has_value(), ("Could not resolve relocation target with name " + symName + " at " + this->locationString(relocSource)));
-        ProgramLocation relocDest = symLoc.value();
+        ProgramLocation relocDest = this->getElfRelocDest(relsymbols, symbol_idx, binaryIdx, relocSource, interpretSymValueAsAddr);
         reloctab.push_back(Relocation(relocSource, relocDest, type));
       }
     }

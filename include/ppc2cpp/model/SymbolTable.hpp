@@ -13,13 +13,19 @@ private:
   std::vector<Symbol> symbols;
   // index by symbol name
   std::unordered_map<std::string, uint32_t> _name_index;
+  // index by symbol location
+  std::unordered_map<ProgramLocation, uint32_t, ProgramLocation::HashFunction> _loc_index;
 
 public:
-  Symbol& operator[](uint32_t& idx) { return symbols[idx]; }
-  const Symbol& operator[](uint32_t& idx) const { return symbols[idx]; }
+  int num_symbols() const { return symbols.size(); }
+  Symbol& operator[](int& idx) { return symbols[idx]; }
+  const Symbol& operator[](int& idx) const { return symbols[idx]; }
   void push_back(const Symbol& sym) { symbols.push_back(sym); }
   // prepares _name_index
   void constructNameIndex();
   std::optional<Symbol> lookupByName(const std::string& name) const;
+  // prepares _loc_index
+  void constructLocationIndex();
+  std::optional<Symbol> lookupByLocation(const ProgramLocation& loc) const;
 };
 }

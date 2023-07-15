@@ -12,6 +12,8 @@ public:
 
   ProgramComparator(ProgramLoaderPtr pLoader1, ProgramLoaderPtr pLoader2) : pLoader1(pLoader1), pLoader2(pLoader2) {}
 
+  bool comparePrograms();
+  bool compareSymbols(const Symbol& sourceSym, const Symbol& targetSym);
   bool compareFunctionFlows(const Function& func1, const Function& func2);
 
 private:
