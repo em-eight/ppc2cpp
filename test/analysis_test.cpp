@@ -191,6 +191,31 @@ TEST(ProgramComparatorTest, ElfProgramComparison) {
   EXPECT_TRUE(programComparator.comparePrograms());
 }
 
+TEST(ProgramComparatorTest, ElfProgramComparisonNegative) {
+  filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
+  vector<filesystem::path> files1 {test_path / "main2.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions options1;
+  options1.projectName = "test_project1";
+  options1.programLoaderType = persistence::LOADER_ELF;
+  options1.inputFiles = files1;
+  options1.projectFile= "./test1.ppc2cpp";
+  Project testProject1 = Project::createProject(options1);
+
+  vector<filesystem::path> files2 {test_path / "main.elf", test_path / "StaticR.elf"};
+
+  ProjectCreationOptions options2;
+  options2.projectName = "test_project2";
+  options2.programLoaderType = persistence::LOADER_ELF;
+  options2.inputFiles = files2;
+  options2.projectFile= "./test2.ppc2cpp";
+  Project testProject2 = Project::createProject(options2);
+  
+  ProgramComparator programComparator(testProject1.programLoader, testProject2.programLoader);
+
+  EXPECT_FALSE(programComparator.comparePrograms());
+}
+
 TEST(DataFlowAnalysisTest, quatmul) {
   filesystem::path test_path = filesystem::path(TEST_PATH) / "binaries";
   // mkw binaries. TODO: test on more convenient binaries

@@ -149,6 +149,37 @@ bool ProgramComparator::compareFunctionFlows(const Function& func1, const Functi
   return true;
 }
 
+// TODO: For now symName and off are only passed for error reporting. In the futur, error reporting should be moved to the parent
+// and this function should only return the diff message
+bool ProgramComparator::compareRelocations(const Relocation& reloc1, const Relocation& reloc2, const std::string& symName, int off) {
+  std::optional<Symbol> maybeRelocSym1 = pLoader1->symtab.lookupByLocation(reloc1.destination);
+  std::optional<Symbol> maybeRelocSym2 = pLoader2->symtab.lookupByLocation(reloc2.destination);
+
+  ASSERT(maybeRelocSym1.has_value(), "Source: could not find symbol referenced by relocation at " + pLoader1->locationString(reloc1.source)
+    + ", destination " + pLoader1->locationString(reloc1.destination));
+  ASSERT(maybeRelocSym2.has_value(), "Target: could not find symbol referenced by relocation at " + pLoader2->locationString(reloc2.source)
+    + ", destination " + pLoader2->locationString(reloc2.destination));
+
+  if (maybeRelocSym1->name != maybeRelocSym2->name) {
+    std::cout << symName << "+" << std::format("0x{:x}", off) << " Referenced symbol mismatch, " <<
+      maybeRelocSym1->name << " != " << maybeRelocSym2->name << "\n";
+    return false;
+  }
+
+  if (reloc1.type != reloc2.type) {
+    std::cout << symName << "+" << std::format("0x{:x}", off) << ": Relocation referencing symbol " << maybeRelocSym2->name <<
+      " has non-matching relocation type " << reloc1.type << " != " << reloc2.type << "\n";
+    return false;
+  }
+
+  if (maybeRelocSym1->symbolBinding == SymbolBinding::LOCAL || maybeRelocSym2->symbolBinding == SymbolBinding::LOCAL) {
+    // for local symbols, also check recurse symbol equivalence because they are not contained in the symbols indexed by name
+    if (!compareSymbols(maybeRelocSym1.value(), maybeRelocSym2.value())) return false;
+  }
+
+  return true;
+}
+
 bool ProgramComparator::compareSymbols(const Symbol& sourceSym, const Symbol& targetSym) {
   ProgramLocation loc2 = targetSym.location;
   ProgramLocation loc1 = sourceSym.location;
@@ -185,36 +216,13 @@ bool ProgramComparator::compareSymbols(const Symbol& sourceSym, const Symbol& ta
     std::optional<Relocation> maybeReloc1 = pLoader2->reloctab.lookupBySource(pos1);
 
     if (maybeReloc1.has_value() != maybeReloc2.has_value()) {
-      std::cout << targetSym.name << "+" << std::format("0x{:x}", off) << ", not both programs have relocation, source: " <<
+      std::cout << targetSym.name << "+" << std::format("0x{:x}", off) << ": not both programs have relocation, source: " <<
         maybeReloc1.has_value() << " != target: " << maybeReloc2.has_value() << "\n";
       return false;
     }
 
     if (maybeReloc2.has_value()) {
-      std::optional<Symbol> maybeRelocSym1 = pLoader1->symtab.lookupByLocation(maybeReloc1->destination);
-      std::optional<Symbol> maybeRelocSym2 = pLoader2->symtab.lookupByLocation(maybeReloc2->destination);
-
-      ASSERT(maybeReloc1.has_value(), "Source: could not find symbol referenced by relocation at " + pLoader1->locationString(maybeReloc1->source)
-        + ", destination " + pLoader1->locationString(maybeReloc1->destination));
-      ASSERT(maybeReloc2.has_value(), "Target: could not find symbol referenced by relocation at " + pLoader2->locationString(maybeReloc2->source)
-        + ", destination " + pLoader2->locationString(maybeReloc2->destination));
-
-      if (maybeRelocSym1->name != maybeRelocSym2->name) {
-        std::cout << targetSym.name << "+" << std::format("0x{:x}", off) << "Referenced symbol mismatch, " <<
-          maybeRelocSym1->name << " != " << maybeRelocSym2->name << "\n";
-        return false;
-      }
-
-      if (maybeReloc1->type != maybeReloc2->type) {
-        std::cout << "Relocation at target location " << pLoader2->locationString(maybeReloc2->source) << " referencing symbol " << maybeRelocSym2->name <<
-          "has non-matching relocation type " << maybeReloc1->type << " != " << maybeReloc2->type << "\n";
-        return false;
-      }
-
-      if (maybeRelocSym1->symbolBinding == SymbolBinding::LOCAL || maybeRelocSym2->symbolBinding == SymbolBinding::LOCAL) {
-        // for local symbols, also check recurse symbol equivalence because they are not contained in the symbols indexed by name
-        if (!compareSymbols(maybeRelocSym1.value(), maybeRelocSym2.value())) return false;
-      }
+      if (!compareRelocations(maybeReloc1.value(), maybeReloc2.value(), targetSym.name, off)) return false;
     }
   }
 
