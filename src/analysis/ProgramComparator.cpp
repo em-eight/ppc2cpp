@@ -201,7 +201,13 @@ bool ProgramComparator::compareSymbols(const Symbol& sourceSym, const Symbol& ta
 
       if (maybeRelocSym1->name != maybeRelocSym2->name) {
         std::cout << targetSym.name << "+" << std::format("0x{:x}", off) << "Referenced symbol mismatch, " <<
-          maybeRelocSym1->name << " != " << maybeRelocSym2->name;
+          maybeRelocSym1->name << " != " << maybeRelocSym2->name << "\n";
+        return false;
+      }
+
+      if (maybeReloc1->type != maybeReloc2->type) {
+        std::cout << "Relocation at target location " << pLoader2->locationString(maybeReloc2->source) << " referencing symbol " << maybeRelocSym2->name <<
+          "has non-matching relocation type " << maybeReloc1->type << " != " << maybeReloc2->type << "\n";
         return false;
       }
 
