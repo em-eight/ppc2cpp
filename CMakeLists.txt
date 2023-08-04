@@ -15,6 +15,8 @@ CPMAddPackage("gh:em-eight/ninutils#26a549969493bb7136cce2f38c14ab2b743c6882")
 CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler
 CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
+# {fmt}
+CPMAddPackage("gh:fmtlib/fmt#10.0.0")
 
 # Import Protobuf
 #
@@ -46,7 +48,7 @@ target_include_directories(ppc2cpp_core PUBLIC
   # protobuf_generate_cpp drops .pb.{h.c} files here.
   ${CMAKE_CURRENT_BINARY_DIR}
 )
-target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio)
+target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${Protobuf_LIBRARIES})
 
 # project_demo #################################################################
 

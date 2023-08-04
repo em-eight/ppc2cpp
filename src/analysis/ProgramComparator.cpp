@@ -1,5 +1,5 @@
 
-#include <format>
+#include <fmt/format.h>
 #include <sstream>
 
 #include "ppcdisasm/ppc-dis.hpp"
@@ -162,13 +162,13 @@ bool ProgramComparator::compareRelocations(const Relocation& reloc1, const Reloc
     + ", destination " + pLoader2->locationString(reloc2.destination));
 
   if (maybeRelocSym1->name != maybeRelocSym2->name) {
-    std::cout << symName << "+" << std::format("0x{:x}", off) << " Referenced symbol mismatch, " <<
+    std::cout << symName << "+" << fmt::format("0x{:x}", off) << " Referenced symbol mismatch, " <<
       maybeRelocSym1->name << " != " << maybeRelocSym2->name << "\n";
     return false;
   }
 
   if (reloc1.type != reloc2.type) {
-    std::cout << symName << "+" << std::format("0x{:x}", off) << ": Relocation referencing symbol " << maybeRelocSym2->name <<
+    std::cout << symName << "+" << fmt::format("0x{:x}", off) << ": Relocation referencing symbol " << maybeRelocSym2->name <<
       " has non-matching relocation type " << reloc1.type << " != " << reloc2.type << "\n";
     return false;
   }
@@ -217,7 +217,7 @@ bool ProgramComparator::compareSymbols(const Symbol& sourceSym, const Symbol& ta
     std::optional<Relocation> maybeReloc1 = pLoader2->reloctab.lookupBySource(pos1);
 
     if (maybeReloc1.has_value() != maybeReloc2.has_value()) {
-      std::cout << targetSym.name << "+" << std::format("0x{:x}", off) << ": not both programs have relocation, source: " <<
+      std::cout << targetSym.name << "+" << fmt::format("0x{:x}", off) << ": not both programs have relocation, source: " <<
         maybeReloc1.has_value() << " != target: " << maybeReloc2.has_value() << "\n";
       return false;
     }
