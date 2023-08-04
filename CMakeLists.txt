@@ -5,6 +5,7 @@ project(ppc2cpp VERSION 1.0)
 set(CMAKE_CXX_STANDARD 20)
 
 include(cmake/CPM.cmake)
+include(FindProtobuf REQUIRED)
 
 # RVL binary parser
 CPMAddPackage("gh:em-eight/ninutils#9c52c522b92ef4400d6a98b58ab9b2ae95f14252")
@@ -14,7 +15,7 @@ CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
 
 # Proto stuff
-find_package(protobuf CONFIG REQUIRED)
+find_package(Protobuf REQUIRED)
 
 set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/*.proto")
