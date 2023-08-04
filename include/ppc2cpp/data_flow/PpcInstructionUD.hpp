@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "ppcdisasm/ppc-dis.hpp"
 #include "opcode/ppc.h"
 

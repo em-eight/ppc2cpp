@@ -1,12 +1,23 @@
 # ppc2cpp
 (work in progress) reverse engineering library and tool.
 
-### Requirements
+## Requirements
 - protobuf
+
+### Basic
+
+```
+cmake -B build
+```
+
+### Ubuntu 22.04
+
+```
+sudo apt install build-essential make cmake protobuf-compiler libprotobuf-dev libz-dev clang libc++-dev libc++abi-dev
+CC=clang CXX=clang++ CXXFLAGS=-stdlib=libc++ cmake -B build
+```
 
 ### Building
 ```
-mkdir build && cd build
-cmake ..
-make
+cmake --build build -j
 ```
