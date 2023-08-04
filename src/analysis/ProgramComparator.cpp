@@ -1,5 +1,6 @@
 
 #include <format>
+#include <sstream>
 
 #include "ppcdisasm/ppc-dis.hpp"
 
