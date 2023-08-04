@@ -1,5 +1,5 @@
-
 #include <format>
+#include <sstream>
 
 #include "ppc2cpp/common/common.h"
 #include "ppc2cpp/program_loader/ElfBinary.hpp"

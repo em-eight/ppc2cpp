@@ -4,8 +4,10 @@ project(ppc2cpp VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 
+# Dependency sadness ###########################################################
+
+# CPM fetches and builds external dependencies
 include(cmake/CPM.cmake)
-include(FindProtobuf REQUIRED)
 
 # RVL binary parser
 CPMAddPackage("gh:em-eight/ninutils#9c52c522b92ef4400d6a98b58ab9b2ae95f14252")
@@ -14,35 +16,39 @@ CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler
 CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
 
-# Proto stuff
+# Import Protobuf
+#
+# There is a lot of pain behind this.
+# The Protobuf repo itself and CMake provide their own ways
+# to locate the library in CMake.  We are using FindProtobuf.cmake
+# which is part of CMake since version 3.9.
+#
+# We are further using a static build, as dynamic linkage is very
+# brittle.  On most systems, libprotobuf.a was compiled with
+# libstdc++.  Therefore, ppc2cpp cannot support libc++ (part of LLVM).
+set(Protobuf_USE_STATIC_LIBS ON)
+include(FindProtobuf)
 find_package(Protobuf REQUIRED)
+include_directories(${Protobuf_INCLUDE_DIRS})
 
-set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/proto")
-file(GLOB PROTO_FILES "${PROTO_PATH}/*.proto")
-foreach(PROTO_FILE ${PROTO_FILES})
-  string(REGEX REPLACE "[.]proto$" ".pb.cc" PROTO_SOURCE ${PROTO_FILE})
-  list(APPEND PROTO_SOURCES ${PROTO_SOURCE})
-endforeach()
+# Generate Protobuf files
+# This is provided by FindProtobuf.cmake
+file(GLOB PROTO_FILES "${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto")
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
 
-set(PROTO_PATH ${CMAKE_CURRENT_SOURCE_DIR}/proto)
-set(PROTO_DEST ${CMAKE_CURRENT_SOURCE_DIR}/proto)
+# ppc2cpp core #################################################################
 
-add_custom_command(OUTPUT ${PROTO_SOURCES}
-                   COMMAND protoc --proto_path=${PROTO_PATH} --cpp_out=${PROTO_DEST} ${PROTO_FILES}
-                   DEPENDS ${PROTO_FILES}
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                   COMMENT "PROTOCC")
-
-file(GLOB_RECURSE ppc2cpp_core_SRC
-     "src/*.cpp"
-)
-add_library(ppc2cpp_core ${ppc2cpp_core_SRC} ${PROTO_SOURCES})
+file(GLOB_RECURSE ppc2cpp_core_SRC "src/*.cpp")
+add_library(ppc2cpp_core ${ppc2cpp_core_SRC} ${PROTO_SRCS} ${PROTO_HDRS} )
 target_include_directories(ppc2cpp_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>  # <prefix>/include
-  ${PROTO_DEST}
+  # protobuf_generate_cpp drops .pb.{h.c} files here.
+  ${CMAKE_CURRENT_BINARY_DIR}
 )
-target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm protobuf::libprotobuf elfio)
+target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio)
+
+# project_demo #################################################################
 
 add_executable(project_demo test/program_loader_demo.cpp)
 target_include_directories(project_demo PUBLIC
@@ -51,7 +57,8 @@ target_include_directories(project_demo PUBLIC
 )
 target_link_libraries(project_demo ppc2cpp_core)
 
-###### TESTS
+# Tests ########################################################################
+
 if(BUILD_TESTING)
 CPMAddPackage(
   NAME googletest

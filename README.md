@@ -3,21 +3,10 @@
 
 ## Requirements
 - protobuf
-
-### Basic
-
-```
-cmake -B build
-```
-
-### Ubuntu 22.04
-
-```
-sudo apt install build-essential make cmake protobuf-compiler libprotobuf-dev libz-dev clang libc++-dev libc++abi-dev
-CC=clang CXX=clang++ CXXFLAGS=-stdlib=libc++ cmake -B build
-```
+  - Debian: `sudo apt install -y protobuf-compiler libprotobuf-dev libz-dev`
 
 ### Building
 ```
+cmake -B build
 cmake --build build -j
 ```
