@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 include(cmake/CPM.cmake)
 
 # RVL binary parser
-CPMAddPackage("gh:em-eight/ninutils#b877507806070d0393b3f8d89ea242885a0bbae2")
+CPMAddPackage("gh:em-eight/ninutils#9c52c522b92ef4400d6a98b58ab9b2ae95f14252")
 # ELF binary parser
 CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler
@@ -20,7 +20,7 @@ set(PROTO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/proto")
 file(GLOB PROTO_FILES "${PROTO_PATH}/*.proto")
 foreach(PROTO_FILE ${PROTO_FILES})
   string(REGEX REPLACE "[.]proto$" ".pb.cc" PROTO_SOURCE ${PROTO_FILE})
-  list(APPEND PROTO_SOURCES ${PROTO_SOURCE}) 
+  list(APPEND PROTO_SOURCES ${PROTO_SOURCE})
 endforeach()
 
 set(PROTO_PATH ${CMAKE_CURRENT_SOURCE_DIR}/proto)
