@@ -68,4 +68,11 @@ std::optional<ninutils::RelReloc> Rel::getRelocAtLocation(const BinaryLocation& 
   const ninutils::RelReloc& relReloc = relocLUT.at(location);
   return relReloc;
 }
+
+void Rel::setLoadInfo(uint32_t rel_load_addr, uint32_t bss_load_addr) {
+  for (auto sec : this->sections) {
+    RelSectionPtr relsec = static_pointer_cast<RelSection>(sec);
+    relsec->setLoadInfo(rel_load_addr, bss_load_addr);
+  }
+}
 }

@@ -24,11 +24,6 @@ ElfBinary::ElfBinary(std::shared_ptr<ELFIO::elfio> elfPtr, std::string filename,
   for (int i = 0; i < elfPtr->sections.size(); i++) {
     this->sections.push_back(std::make_shared<ElfSection>(elfPtr->sections[i]));
   }
-  
-  _hasLoadInfo = false;
-  for (int i = 0; i < elfPtr->sections.size(); i++) {
-    if (elfPtr->sections[i]->get_address() > 0) _hasLoadInfo = true;
-  }
 }
 
 bool ElfBinary::isExcecutable() const {
@@ -37,9 +32,5 @@ bool ElfBinary::isExcecutable() const {
 
 bool ElfBinary::isRelocatable() const {
   return _elfPtr->get_type() == ET_REL;
-}
-
-bool ElfBinary::hasLoadInfo() const {
-  return _hasLoadInfo;
 }
 }

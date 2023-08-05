@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <filesystem>
+#include <string>
 
 #include "Binary.hpp"
 #include "ppc2cpp/model/SymbolTable.hpp"
@@ -40,6 +41,7 @@ public:
   virtual std::optional<ProgramLocation> resolveVMA(uint32_t vma);
   // get definition of symbol name
   virtual std::optional<ProgramLocation> resolveByName(const std::string& symname);
+  int findBinaryIdxByName(std::string_view name) const;
 
   // protobuf persistence
   persistence::ProgramLoaderType loaderType;

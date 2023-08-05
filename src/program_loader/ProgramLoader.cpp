@@ -90,4 +90,13 @@ std::string ProgramLoader::locationString(const ProgramLocation& loc) const {
   return "{" + this->binaries[loc.binary_idx]->name + ", " + 
     this->binaries[loc.binary_idx]->sections[loc.section_idx]->name + ", " + std::format("0x{:x}", loc.section_offset) + "}";
 }
+  
+int ProgramLoader::findBinaryIdxByName(std::string_view name) const {
+  for (int i = 0; i < this->binaries.size(); i++) {
+    if (this->binaries[i]->name == name) {
+      return i;
+    }
+  }
+  return -1;
+}
 }
