@@ -160,15 +160,24 @@ bool ProgramComparator::compareRelocations(const Relocation& reloc1, const Reloc
   ASSERT(maybeRelocSym2.has_value(), "Target: could not find symbol referenced by relocation at " + pLoader2->locationString(reloc2.source)
     + ", destination " + pLoader2->locationString(reloc2.destination));
 
+  // compare targets
   if (maybeRelocSym1->name != maybeRelocSym2->name) {
     std::cout << symName << "+" << std::format("0x{:x}", off) << " Referenced symbol mismatch, " <<
       maybeRelocSym1->name << " != " << maybeRelocSym2->name << "\n";
     return false;
   }
 
+  // compare types
   if (reloc1.type != reloc2.type) {
     std::cout << symName << "+" << std::format("0x{:x}", off) << ": Relocation referencing symbol " << maybeRelocSym2->name <<
       " has non-matching relocation type " << reloc1.type << " != " << reloc2.type << "\n";
+    return false;
+  }
+  
+  // compare addends
+  if (reloc1.addend != reloc2.addend) {
+    std::cout << symName << "+" << std::format("0x{:x}", off) << ": Relocation referencing symbol " << maybeRelocSym2->name <<
+      " has non-matching addend " << reloc1.addend << " != " << reloc2.addend << "\n";
     return false;
   }
 

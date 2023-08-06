@@ -12,7 +12,9 @@ public:
   ProgramLocation destination;
   // relocation type, as defined by the architecture
   uint8_t type;
+  int32_t addend;
 
-  Relocation(ProgramLocation source, ProgramLocation destination, uint8_t type) : source(source), destination(destination), type(type) {}
+  Relocation(ProgramLocation source, ProgramLocation destination, uint8_t type) : source(source), destination(destination), type(type), addend(0) {}
+  Relocation(ProgramLocation source, ProgramLocation destination, uint8_t type, int32_t addend) : source(source), destination(destination), type(type), addend(addend) {}
 };
 }

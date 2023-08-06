@@ -113,7 +113,7 @@ void ElfProgramLoader::registerRelocations(std::shared_ptr<elfio> elfPtr, int bi
         relocs.get_entry(j, offset, symbol_idx, type, addend);
         ProgramLocation relocSource = { binaryIdx, rel_sec_idx, static_cast<uint32_t>(offset) };
         ProgramLocation relocDest = this->getElfRelocDest(relsymbols, symbol_idx, binaryIdx, relocSource, interpretSymValueAsAddr);
-        reloctab.push_back(Relocation(relocSource, relocDest, type));
+        reloctab.push_back(Relocation(relocSource, relocDest, type, addend));
       }
     }
   }
