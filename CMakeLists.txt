@@ -24,11 +24,19 @@ CPMAddPackage("gh:fmtlib/fmt#10.0.0")
 # The Protobuf repo itself and CMake provide their own ways
 # to locate the library in CMake.  We are using FindProtobuf.cmake
 # which is part of CMake since version 3.9.
-#
-# We are further using a static build, as dynamic linkage is very
-# brittle.  On most systems, libprotobuf.a was compiled with
-# libstdc++.  Therefore, ppc2cpp cannot support libc++ (part of LLVM).
-set(Protobuf_USE_STATIC_LIBS ON)
+
+# If the Protobuf_LIBRARY workaround is used (see README), the user
+# could either specify a static or shared library.  Depending on either,
+# we need to correctly set the link mode before calling find_package.
+# Newer versions of Protobuf depend on Abseil.
+if(DEFINED Protobuf_LIBRARY)
+  if(Protobuf_LIBRARY MATCHES "\.a$")
+    set(Protobuf_USE_STATIC_LIBS ON)
+  else()
+    set(Protobuf_USE_STATIC_LIBS OFF)
+  endif()
+endif()
+
 include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
