@@ -1,5 +1,5 @@
-
-#include <format>
+#include <fmt/format.h>
+#include <sstream>
 
 #include "ppc2cpp/common/common.h"
 #include "ppc2cpp/program_loader/ElfBinary.hpp"
@@ -31,7 +31,7 @@ ElfProgramLoader::ElfProgramLoader(const std::vector<std::filesystem::path>& bin
 ProgramLocation ElfProgramLoader::getElfSymbolLocation(int binaryIdx, Elf_Half section_index, Elf64_Addr value, bool interpretSymValueAsAddr) {
   if (interpretSymValueAsAddr || section_index == SHN_ABS) {
     auto maybeSymLoc = this->resolveVMA(value);
-    ASSERT(maybeSymLoc.has_value(), ("Could not resolve symbol at address " + std::format("0x{:x}", value)));
+    ASSERT(maybeSymLoc.has_value(), ("Could not resolve symbol at address " + fmt::format("0x{:x}", value)));
     return maybeSymLoc.value();
   } else {
     return ProgramLocation(binaryIdx, section_index, value);

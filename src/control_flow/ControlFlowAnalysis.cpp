@@ -1,5 +1,5 @@
 
-#include <format>
+#include <fmt/format.h>
 
 #include "ppc2cpp/control_flow/ControlFlowAnalysis.hpp"
 #include "ppc2cpp/control_flow/ControlFlowGraph.hpp"

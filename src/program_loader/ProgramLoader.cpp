@@ -1,5 +1,5 @@
 
-#include <format>
+#include <fmt/format.h>
 
 #include "ppc2cpp/common/ProjectPersistenceException.hpp"
 #include "ppc2cpp/program_loader/NinProgramLoader.hpp"
@@ -114,7 +114,7 @@ std::optional<ProgramLocation> ProgramLoader::resolveByName(const std::string& n
 
 std::string ProgramLoader::locationString(const ProgramLocation& loc) const {
   return "{" + this->binaries[loc.binary_idx]->name + ", " + 
-    this->binaries[loc.binary_idx]->sections[loc.section_idx]->name + ", " + std::format("0x{:x}", loc.section_offset) + "}";
+    this->binaries[loc.binary_idx]->sections[loc.section_idx]->name + ", " + fmt::format("0x{:x}", loc.section_offset) + "}";
 }
   
 int ProgramLoader::findBinaryIdxByName(std::string_view name) const {
