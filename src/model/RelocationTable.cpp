@@ -15,4 +15,21 @@ std::optional<Relocation> RelocationTable::lookupBySource(const ProgramLocation&
   if (val != this->_source_index.end()) return this->relocs[val->second];
   else return std::nullopt;
 }
+
+void RelocationTable::toProto(persistence::RelocTable* reloctabProto) const {
+  for (const auto& reloc : relocs) {
+    reloc.toProto(reloctabProto->add_relocs());
+  }
+}
+
+RelocationTable RelocationTable::fromProto(const persistence::RelocTable* reloctabProto) {
+  RelocationTable reloctab;
+  for (const auto& relocProto : reloctabProto->relocs()) {
+    reloctab.push_back(Relocation::fromProto(&relocProto));
+  }
+
+  reloctab.constructSourceIndex();
+
+  return reloctab;
+}
 }

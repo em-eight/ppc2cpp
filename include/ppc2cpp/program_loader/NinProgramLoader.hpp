@@ -11,7 +11,7 @@ namespace ppc2cpp {
 */
 class NinProgramLoader : public ProgramLoader {
 public:
-  NinProgramLoader(const ::google::protobuf::RepeatedPtrField<persistence::ProgramLoaderBinary>& binaryProtos);
+  NinProgramLoader(const std::vector<std::filesystem::path>& binaryProtos);
   std::optional<ProgramLocation> getReferenceAtLocation(const ProgramLocation& location) override;
   int32_t moduleId2binaryIdx(int32_t module_id);
 };

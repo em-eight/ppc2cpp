@@ -8,14 +8,13 @@
 namespace ppc2cpp {
 class ElfBinary : public Binary {
 public:
-  ElfBinary(std::shared_ptr<ELFIO::elfio> elfPtr, std::string filename, std::string filedata);
+  ElfBinary(const std::filesystem::path& filepath);
   virtual bool isExcecutable() const override;
   virtual bool isRelocatable() const override;
 
   const std::shared_ptr<ELFIO::elfio>& getElfPtr() const { return _elfPtr; }
 
 private:
-  std::string _rawElf;
   std::shared_ptr<ELFIO::elfio> _elfPtr;
 };
 typedef std::shared_ptr<ElfBinary> ElfBinaryPtr;

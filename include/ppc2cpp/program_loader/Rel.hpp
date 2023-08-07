@@ -10,7 +10,7 @@
 namespace ppc2cpp {
 class Rel : public Binary {
 public:
-  Rel(std::string name, std::shared_ptr<ninutils::Rel> relPtr);
+  Rel(const std::filesystem::path& filepath);
   virtual bool isExcecutable() const { return false; }
   virtual bool isRelocatable() const { return true; }
 

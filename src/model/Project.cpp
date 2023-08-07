@@ -16,19 +16,8 @@ Project Project::createProject(const ProjectCreationOptions& options) {
   projectFile.set_projectname(options.projectName);
   projectFile.set_projectversion(1);
 
-  programLoader.set_formatversion(PROGRAM_LOADER_PROTO_CURRENT_VERSION);
-  programLoader.set_loadertype(options.programLoaderType);
-  for (const auto& inputFile : options.inputFiles) {
-    auto* binaryProto = programLoader.add_binaries();
-    binaryProto->set_filename(inputFile.filename());
-
-    std::ifstream fstream(inputFile, std::ios::binary | std::ios::in);
-    if (!fstream.is_open()) throw std::runtime_error("Input file " + inputFile.string() + " was not found");
-    std::stringstream sstream;
-    sstream << fstream.rdbuf();
-    binaryProto->set_data(sstream.str());
-  }
-  *projectFile.mutable_program_loader() = programLoader;
+  ProgramLoaderPtr pLoader = ProgramLoader::loadProgram(PROGRAM_LOADER_PROTO_CURRENT_VERSION, options.programLoaderType, options.inputFiles);
+  pLoader->toProto(projectFile.mutable_program_loader());
 
   {
     std::fstream output(options.projectFile.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);

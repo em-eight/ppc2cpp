@@ -1,0 +1,10 @@
+
+syntax = "proto3";
+
+package persistence;
+
+message ProgramLocation {
+    uint32 binary_idx = 1;
+    uint32 section_idx = 2;
+    uint32 offset = 3;
+}

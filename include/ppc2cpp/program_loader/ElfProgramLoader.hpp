@@ -13,7 +13,7 @@ namespace ppc2cpp {
 */
 class ElfProgramLoader : public ProgramLoader {
 public:
-  ElfProgramLoader(const ::google::protobuf::RepeatedPtrField<persistence::ProgramLoaderBinary>& binaryProtos);
+  ElfProgramLoader(const std::vector<std::filesystem::path>& binaryPaths);
   std::optional<ProgramLocation> getReferenceAtLocation(const ProgramLocation& location) override;
 
 private:

@@ -1,0 +1,18 @@
+
+syntax = "proto3";
+
+package persistence;
+
+import "program_location.proto";
+
+message Symbol {
+    string name = 1;
+    ProgramLocation location = 2;
+    uint32 size = 3;
+    uint32 st_bind = 4;
+    uint32 st_type = 5;
+}
+
+message SymbolTable {
+    repeated Symbol symbols = 1;
+}

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include "BinarySection.hpp"
 #include "ppc2cpp/model/ProgramLocation.hpp"
@@ -14,6 +15,9 @@
 namespace ppc2cpp {
 class Binary {
 public:
+  // classes inheriting Binary should call this superconstructor to initialize Binary's data, size and name
+  Binary(std::filesystem::path filepath);
+
   virtual bool isExcecutable() const = 0;
   virtual bool isRelocatable() const = 0;
   /**
@@ -63,12 +67,11 @@ public:
   // get location of virtual memory address within the program's binaries, if it exists 
   virtual std::optional<BinaryLocation> resolveVMA(uint32_t vma);
 
+  std::filesystem::path filepath;
   // original binary filename
   std::string name;
   // buffer to file data
-  uint8_t* data;
-  // size of file in bytes
-  uint32_t size;
+  std::string data;
   // sections/segments of a binary
   std::vector<std::shared_ptr<BinarySection>> sections;
 

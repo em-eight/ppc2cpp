@@ -10,7 +10,7 @@
 namespace ppc2cpp {
 class Dol : public Binary {
 public:
-  Dol(std::string name, std::shared_ptr<ninutils::Dol> dolPtr);
+  Dol(const std::filesystem::path& filepath);
   virtual bool isExcecutable() const { return true; }
   virtual bool isRelocatable() const { return false; }
 

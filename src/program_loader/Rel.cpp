@@ -41,10 +41,8 @@ void Rel::genSectionName(uint8_t sec) {
   }
 }
 
-Rel::Rel(std::string name, std::shared_ptr<ninutils::Rel> relPtr) : _relPtr(relPtr) {
-  this->name = name;
-  this->size = _relPtr->fileSize;
-  this->data = _relPtr->file;
+Rel::Rel(const std::filesystem::path& filepath) : Binary(filepath) {
+  this->_relPtr = std::make_shared<ninutils::Rel>((uint8_t*)this->data.c_str(), this->data.size());
 
   this->sections.reserve(_relPtr->secs_raw.size());
   for (const auto& ninrelsec : _relPtr->secs_raw) {

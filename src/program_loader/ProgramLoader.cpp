@@ -6,7 +6,25 @@
 #include "ppc2cpp/program_loader/ElfProgramLoader.hpp"
 #include "ppc2cpp/program_loader/ProgramLoader.hpp"
 
+#include "symbols.pb.h"
+#include "relocs.pb.h"
+
 namespace ppc2cpp {
+ProgramLoaderPtr ProgramLoader::loadProgram(int32_t loaderProtoVersion, persistence::ProgramLoaderType loaderType,
+    const std::vector<std::filesystem::path>& binary_paths) {
+  ProgramLoaderPtr programLoader;
+  if (loaderType == persistence::LOADER_RVL) {
+    programLoader = std::make_shared<NinProgramLoader>(NinProgramLoader(binary_paths));
+  } else if (loaderType == persistence::LOADER_ELF) {
+    programLoader = std::make_shared<ElfProgramLoader>(ElfProgramLoader(binary_paths));
+  } else {
+    throw new ProjectPersistenceException("Unknown program loader type " + loaderType);
+  }
+
+  programLoader->loaderType = loaderType;
+  return programLoader;
+}
+
 std::optional<ProgramLocation> ProgramLoader::getLocation(const std::string& binaryName, const std::string& sectionName, uint32_t offset) {
   for (int i = 0; i < binaries.size(); i++) {
     if (binaries[i]->name == binaryName) {
@@ -57,26 +75,34 @@ std::optional<ProgramLocation> ProgramLoader::resolveTarget(const ProgramLocatio
 
 void ProgramLoader::toProto(persistence::ProgramLoader* loaderProto) const {
   loaderProto->set_formatversion(PROGRAM_LOADER_PROTO_CURRENT_VERSION);
+  loaderProto->set_loadertype(this->loaderType);
   for (const BinaryPtr binary : binaries) {
     persistence::ProgramLoaderBinary* binaryProto = loaderProto->add_binaries();
     binary->toProto(binaryProto);
   }
+
+  this->symtab.toProto(loaderProto->mutable_symtab());
+  std::cout << "proto symtab " << loaderProto->symtab().symbols().size() << "\n";
+  this->reloctab.toProto(loaderProto->mutable_reloctab());
+  std::cout << "proto symtab " << loaderProto->reloctab().relocs().size() << "\n";
 }
 
 ProgramLoaderPtr ProgramLoader::fromProto(const persistence::ProgramLoader* loaderProto) {
   auto loaderProtoVersion = loaderProto->formatversion();
   auto loaderType = loaderProto->loadertype();
 
-  ProgramLoaderPtr programLoader;
-  if (loaderType == persistence::LOADER_RVL) {
-    programLoader = std::make_shared<NinProgramLoader>(NinProgramLoader(loaderProto->binaries()));
-  } else if (loaderType == persistence::LOADER_ELF) {
-    programLoader = std::make_shared<ElfProgramLoader>(ElfProgramLoader(loaderProto->binaries()));
-  } else {
-    throw new ProjectPersistenceException("Unknown program loader type " + loaderType);
-  }
+  std::vector<std::filesystem::path> binary_paths;
+  std::transform(loaderProto->binaries().begin(), loaderProto->binaries().end(), std::back_inserter(binary_paths), [](const auto& bin) {
+    return bin.filepath();
+  });
+  ProgramLoaderPtr programLoader = ProgramLoader::loadProgram(loaderProtoVersion, loaderType, binary_paths);
 
-  programLoader->loaderType = loaderType;
+  // override symtab and reloctab information if anything is already defined in the protos
+  if (loaderProto->symtab().symbols().size() > 0)
+    programLoader->symtab = SymbolTable::fromProto(&loaderProto->symtab());
+  if (loaderProto->reloctab().relocs().size() > 0)
+    programLoader->reloctab = RelocationTable::fromProto(&loaderProto->reloctab());
+
   return programLoader;
 }
 

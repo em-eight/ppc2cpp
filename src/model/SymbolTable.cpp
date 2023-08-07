@@ -30,4 +30,22 @@ std::optional<Symbol> SymbolTable::lookupByLocation(const ProgramLocation& name)
   if (val != this->_loc_index.end()) return this->symbols[val->second];
   else return std::nullopt;
 }
+
+void SymbolTable::toProto(persistence::SymbolTable* symtabProto) const {
+  for (const auto& sym : symbols) {
+    sym.toProto(symtabProto->add_symbols());
+  }
+}
+
+SymbolTable SymbolTable::fromProto(const persistence::SymbolTable* symtabProto) {
+  SymbolTable symtab;
+  for (const auto& symProto : symtabProto->symbols()) {
+    symtab.push_back(Symbol::fromProto(&symProto));
+  }
+
+  symtab.constructLocationIndex();
+  symtab.constructNameIndex();
+
+  return symtab;
+}
 }

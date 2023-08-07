@@ -1,0 +1,17 @@
+
+syntax = "proto3";
+
+package persistence;
+
+import "program_location.proto";
+
+message Relocation {
+    ProgramLocation location = 1;
+    ProgramLocation target = 2;
+    uint32 type = 3;
+    uint32 addend = 4;
+}
+
+message RelocTable {
+    repeated Relocation relocs = 1;
+}

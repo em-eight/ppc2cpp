@@ -2,8 +2,11 @@ syntax = "proto3";
 
 package persistence;
 
+import "symbols.proto";
+import "relocs.proto";
+
 message ProgramLoaderBinary {
-    string fileName = 1;
+    string filePath = 1;
     bytes data = 2;
 }
 
@@ -20,4 +23,6 @@ message ProgramLoader {
 
     ProgramLoaderType loaderType = 2;
     repeated ProgramLoaderBinary binaries = 3;
+    SymbolTable symtab = 4;
+    RelocTable reloctab = 5;
 }

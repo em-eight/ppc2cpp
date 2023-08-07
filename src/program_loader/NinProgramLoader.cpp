@@ -9,18 +9,20 @@
 #include "ninutils/dol.hpp"
 
 namespace ppc2cpp {
-NinProgramLoader::NinProgramLoader(const ::google::protobuf::RepeatedPtrField<persistence::ProgramLoaderBinary>& binaryProtos) {
-  for (const auto& binaryProto : binaryProtos) {
-    std::string filename = binaryProto.filename();
-    std::string data = binaryProto.data();
+NinProgramLoader::NinProgramLoader(const std::vector<std::filesystem::path>& binaryPaths) {
+  for (const auto& binaryPath : binaryPaths) {
+    std::string filename = binaryPath.filename();
+    std::ifstream fstream(binaryPath, std::ios::binary | std::ios::in);
+    if (!fstream.is_open()) throw std::runtime_error("Input file " + binaryPath.string() + " was not found");
+    std::stringstream sstream;
+    sstream << fstream.rdbuf();
+    std::string data = sstream.str();
     std::string file_extension = filename.substr(filename.find_last_of("."));
 
     if (file_extension == ".dol") {
-      std::shared_ptr<ninutils::Dol> _dolptr = std::make_shared<ninutils::Dol>((uint8_t*) data.c_str(), data.size());
-      this->binaries.emplace_back(std::make_shared<Dol>(filename, _dolptr));
+      this->binaries.emplace_back(std::make_shared<Dol>(binaryPath));
     } else if (file_extension == ".rel") {
-      std::shared_ptr<ninutils::Rel> _relptr = std::make_shared<ninutils::Rel>((uint8_t*) data.c_str(), data.size());
-      this->binaries.emplace_back(std::make_shared<Rel>(filename, _relptr));
+      this->binaries.emplace_back(std::make_shared<Rel>(binaryPath));
     } else {
       throw FileTypeException("Unknown extension " + file_extension);
     }

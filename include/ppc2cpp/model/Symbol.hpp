@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+#include "symbols.pb.h"
+
 #include "ppc2cpp/model/ProgramLocation.hpp"
 
 namespace ppc2cpp {
@@ -38,5 +40,17 @@ public:
                                                      && location.section_idx == loc.section_idx
                                                      && location.section_offset <= loc.section_offset
                                                      && loc.section_offset < location.section_offset + size; }
+  void toProto(persistence::Symbol* symProto) const {
+    symProto->set_name(name);
+    location.toProto(symProto->mutable_location());
+    symProto->set_size(size);
+    symProto->set_st_type(static_cast<uint32_t>(symbolType));
+    symProto->set_st_bind(static_cast<uint32_t>(symbolBinding));
+  }
+
+  static Symbol fromProto(const persistence::Symbol* symProto) {
+    return Symbol(ProgramLocation::fromProto(&symProto->location()), symProto->size(), symProto->name(),
+      static_cast<SymbolType>(symProto->st_type()), static_cast<SymbolBinding>(symProto->st_bind()));
+  }
 };
 }

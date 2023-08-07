@@ -1,7 +1,20 @@
 
+#include <fstream>
+#include <sstream>
+
 #include "ppc2cpp/program_loader/Binary.hpp"
 
 namespace ppc2cpp {
+Binary::Binary(std::filesystem::path binaryPath) {
+  this->filepath = binaryPath;
+  this->name = binaryPath.filename();
+
+  std::ifstream fstream(binaryPath, std::ios::binary | std::ios::in);
+  if (!fstream.is_open()) throw std::runtime_error("Input file " + binaryPath.string() + " was not found");
+  std::stringstream sstream;
+  sstream << fstream.rdbuf();
+  this->data = sstream.str(); // copy binary data to buffer
+}
 
 std::optional<BinaryLocation> Binary::resolveVMA(uint32_t vma) {
   for (int i = 0; i < sections.size(); i++) {
@@ -14,7 +27,7 @@ std::optional<BinaryLocation> Binary::resolveVMA(uint32_t vma) {
 }
 
 void Binary::toProto(persistence::ProgramLoaderBinary* binaryProto) const {
-  binaryProto->set_filename(this->name);
-  binaryProto->set_data(this->data, this->size);
+  binaryProto->set_filepath(this->filepath);
+  binaryProto->set_data(this->data);
 }
 }

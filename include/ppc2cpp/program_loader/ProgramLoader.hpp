@@ -26,6 +26,8 @@ public:
   SymbolTable symtab;
   RelocationTable reloctab;
 
+  static std::shared_ptr<ProgramLoader> loadProgram(int32_t loaderProtoVersion, persistence::ProgramLoaderType loaderType,
+    const std::vector<std::filesystem::path>& binaryProtos);
   virtual ~ProgramLoader() { }
   // get a location by binary name, section name and offset
   virtual std::optional<ProgramLocation> getLocation(const std::string& binaryName, const std::string& sectionName, uint32_t offset);

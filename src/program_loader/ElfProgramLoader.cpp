@@ -9,18 +9,12 @@
 using namespace ELFIO;
 
 namespace ppc2cpp {
-ElfProgramLoader::ElfProgramLoader(const ::google::protobuf::RepeatedPtrField<persistence::ProgramLoaderBinary>& binaryProtos) {
-  for (const auto& binaryProto : binaryProtos) {
-    std::string filename = binaryProto.filename();
-    std::string data = binaryProto.data();
-    std::istringstream elf_stream(data);
+ElfProgramLoader::ElfProgramLoader(const std::vector<std::filesystem::path>& binaryPaths) {
+  for (const auto& binaryPath : binaryPaths) {
+    ElfBinaryPtr elfBinary = std::make_shared<ElfBinary>(binaryPath);
+    this->binaries.emplace_back(elfBinary);
 
-    auto elfReader = std::make_shared<elfio>();
-    elfReader->load(elf_stream);
-    
-    this->binaries.emplace_back(std::make_shared<ElfBinary>(elfReader, filename, data));
-
-    this->registerSymbols(elfReader, this->binaries.size()-1);
+    this->registerSymbols(elfBinary->getElfPtr(), this->binaries.size()-1);
   }
 
   this->symtab.constructNameIndex();
