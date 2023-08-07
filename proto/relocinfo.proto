@@ -1,0 +1,27 @@
+
+syntax = "proto3";
+
+package ppcdis;
+
+enum RelocType {
+  UNSPECIFIED = 0;
+  NORMAL = 1;
+  ALGREBRAIC = 2;
+  SDA = 3;
+}
+
+message Reloc {
+  RelocType type = 1;
+  uint32 target = 2;
+  uint32 offset = 3;
+}
+
+message Jumptable {
+  uint32 size = 1;
+}
+
+message RelocInfo {
+  map<uint32, Reloc> relocs = 1;
+  map<uint32, Jumptable> jumptables = 2;
+}
+

@@ -12,6 +12,8 @@ CPMAddPackage("gh:em-eight/ninutils#b877507806070d0393b3f8d89ea242885a0bbae2")
 CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler
 CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
+# yaml
+CPMAddPackage("gh:jbeder/yaml-cpp#yaml-cpp-0.7.0")
 
 # Proto stuff
 find_package(protobuf CONFIG REQUIRED)
@@ -40,8 +42,9 @@ target_include_directories(ppc2cpp_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>  # <prefix>/include
   ${PROTO_DEST}
+  ${YAML_CPP_INCLUDE_DIRS}
 )
-target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm protobuf::libprotobuf elfio)
+target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm protobuf::libprotobuf elfio ${YAML_CPP_LIBRARIES})
 
 add_executable(project_demo test/program_loader_demo.cpp)
 target_include_directories(project_demo PUBLIC
