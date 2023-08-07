@@ -1,7 +1,7 @@
 
 #include <filesystem>
 #include <fstream>
-#include <format>
+#include <fmt/format.h>
 #include <unordered_map>
 #include <cstdint>
 
@@ -48,7 +48,7 @@ void loadBinaryInfoFromPpcdis(ProgramLoaderPtr pLoader, const std::string& bin_y
   SymbolTable& symtab = pLoader->symtab;
   for (auto it : labelinfo.labels()) {
     uint32_t addr = it.first;
-    ASSERT(pLoader->resolveVMA(addr).has_value(), "Could not resolve VMA " + std::format("0x{:x}", addr));
+    ASSERT(pLoader->resolveVMA(addr).has_value(), "Could not resolve VMA " + fmt::format("0x{:x}", addr));
     ProgramLocation symLoc = pLoader->resolveVMA(addr).value();
 
     // Add symbol if it doesn't exist
@@ -58,7 +58,7 @@ void loadBinaryInfoFromPpcdis(ProgramLoaderPtr pLoader, const std::string& bin_y
     if (auto foundname = namemap.find(addr); foundname != namemap.end()) {
       name = foundname->second;
     } else {
-      name = std::format("lab_{:x}", addr);
+      name = fmt::format("lab_{:x}", addr);
     }
     ppcdis::Label ppcdisLabel = it.second;
 
@@ -80,13 +80,13 @@ void loadBinaryInfoFromPpcdis(ProgramLoaderPtr pLoader, const std::string& bin_y
   RelocationTable& reloctab = pLoader->reloctab;
   for (auto it : relocinfo.relocs()) {
     uint32_t addr = it.first;
-    ASSERT(pLoader->resolveVMA(addr).has_value(), "Could not resolve VMA " + std::format("0x{:x}", addr));
+    ASSERT(pLoader->resolveVMA(addr).has_value(), "Could not resolve VMA " + fmt::format("0x{:x}", addr));
     ProgramLocation location = pLoader->resolveVMA(addr).value();
 
     // Add relocation if it doesn't exist
     if (reloctab.lookupBySource(location).has_value()) continue;
     ppcdis::Reloc ppcdisReloc = it.second;
-    ASSERT(pLoader->resolveVMA(ppcdisReloc.target()).has_value(), "Could not resolve VMA " + std::format("0x{:x}", ppcdisReloc.target()));
+    ASSERT(pLoader->resolveVMA(ppcdisReloc.target()).has_value(), "Could not resolve VMA " + fmt::format("0x{:x}", ppcdisReloc.target()));
     ProgramLocation target = pLoader->resolveVMA(ppcdisReloc.target()).value();
     throw std::runtime_error("TODO: deduce reloc type");// TODO deduce reloc type
     reloctab.push_back(Relocation(location, target, 69, ppcdisReloc.offset()));
