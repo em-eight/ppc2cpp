@@ -48,9 +48,5 @@ cmake -B build \
   -DProtobuf_LIBRARY="$(pkg-config --libs protobuf)"
 ```
 
-Newer versions of Protobuf depend on Abseil, so it is recommended to
-specify the dynamic library here (.dylib or .so) instead of the static
-library (.a) to avoid unresolved symbol errors.
-
 If all of the above still doesn't work, sometimes it helps to delete
 your CMake cache.
