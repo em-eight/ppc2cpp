@@ -177,7 +177,7 @@ bool ProgramComparator::compareRelocations(const Relocation& reloc1, const Reloc
   
   // compare addends
   if (reloc1.addend != reloc2.addend) {
-    std::cout << symName << "+" << std::format("0x{:x}", off) << ": Relocation referencing symbol " << maybeRelocSym2->name <<
+    std::cout << symName << "+" << fmt::format("0x{:x}", off) << ": Relocation referencing symbol " << maybeRelocSym2->name <<
       " has non-matching addend " << reloc1.addend << " != " << reloc2.addend << "\n";
     return false;
   }
