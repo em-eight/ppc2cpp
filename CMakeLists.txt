@@ -16,7 +16,16 @@ CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler
 CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
 # yaml
-CPMAddPackage("gh:jbeder/yaml-cpp#yaml-cpp-0.7.0")
+CPMAddPackage(
+  NAME yaml-cpp
+  GITHUB_REPOSITORY jbeder/yaml-cpp
+  VERSION 0.7.0
+  GIT_TAG yaml-cpp-0.7.0
+  OPTIONS
+    "YAML_CPP_BUILD_TESTS Off"
+    "YAML_CPP_BUILD_CONTRIB Off"
+    "YAML_CPP_BUILD_TOOLS Off"
+)
 # {fmt}
 CPMAddPackage("gh:fmtlib/fmt#10.0.0")
 
@@ -55,11 +64,11 @@ add_library(ppc2cpp_core ${ppc2cpp_core_SRC} ${PROTO_SRCS} ${PROTO_HDRS} )
 target_include_directories(ppc2cpp_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>  # <prefix>/include
-  ${YAML_CPP_INCLUDE_DIRS}
+  ${YAML_CPP_SOURCE_DIR}/include
   # protobuf_generate_cpp drops .pb.{h.c} files here.
   ${CMAKE_CURRENT_BINARY_DIR}
 )
-target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${Protobuf_LIBRARIES} ${YAML_CPP_LIBRARIES})
+target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${Protobuf_LIBRARIES} yaml-cpp)
 
 # project_demo #################################################################
 
