@@ -14,7 +14,13 @@ CPMAddPackage("gh:em-eight/ninutils#9c52c522b92ef4400d6a98b58ab9b2ae95f14252")
 # ELF binary parser
 CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler
-CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
+#CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
+CPMAddPackage(
+  NAME ppcdisasm-cpp
+  OPTIONS "BUILD_TESTING OFF"
+  GITHUB_REPOSITORY "em-eight/ppcdisasm-cpp"
+  GIT_TAG "4e2c2e1"
+)
 # yaml
 CPMAddPackage(
   NAME yaml-cpp
