@@ -27,12 +27,11 @@ Project Project::createProject(const ProjectCreationOptions& options) {
     }
   }
 
-  Project project;
-  project.openProject(options.projectFile);
-  return project;
+  return Project::openProject(options.projectFile);
 }
 
-void Project::openProject(const std::filesystem::path& projectFile) {
+Project Project::openProject(const std::filesystem::path& projectFile) {
+  Project project;
   persistence::Project projectProto;
 
   {
@@ -42,9 +41,11 @@ void Project::openProject(const std::filesystem::path& projectFile) {
     }
   }
 
-  this->programLoader = ProgramLoader::fromProto(&projectProto.program_loader());
-  this->projectFile = projectFile;
-  this->name = projectProto.projectname();
+  project.programLoader = ProgramLoader::fromProto(&projectProto.program_loader());
+  project.projectFile = projectFile;
+  project.name = projectProto.projectname();
+
+  return project;
 }
 
 void Project::saveProject() {

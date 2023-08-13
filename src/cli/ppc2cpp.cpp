@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include "ppc2cpp/model/Project.hpp"
+#include "ppc2cpp/analysis/PpcdisAnalysis.hpp"
 
 using namespace std;
 using namespace ppc2cpp;
@@ -28,8 +29,7 @@ void cli_create(int argc, char** argv) {
     } else if (strcmp("--help", argv[i]) == 0 || strcmp("-h", argv[i]) == 0) {
       print_create_usage(0);  
     } else {
-      filesystem::path inputFile(argv[i]);
-      if (!filesystem::is_regular_file(inputFile)) {
+      if (!filesystem::is_regular_file(argv[i])) {
         cout << "Could not open file " << argv[i] << '\n';
         exit(4);
       }
@@ -52,8 +52,61 @@ void cli_create(int argc, char** argv) {
     options.projectFile << '\n';
 }
 
-void cli_import_ppcdis(int argc, char** argv) {
+void print_importppcdis_usage(int exitcode) {
+  // TODO
+  exit(exitcode);
+}
 
+void cli_import_ppcdis(int argc, char** argv) {
+  filesystem::path projectProtoFile;
+  string symbolMap;
+  vector<PpcdisInfoFiles> ppcdisInfoFiles;
+
+  for (int i = 2; i < argc; i++) {
+    if (strcmp("--in", argv[i]) == 0 || strcmp("-i", argv[i]) == 0) {
+      if (i+1 >= argc) {
+        print_importppcdis_usage(7);
+      }
+      if (!filesystem::is_regular_file(argv[i+1])) {
+        cout << "Could not open file " << argv[i+1] << '\n';
+        exit(13);
+      }
+      projectProtoFile = argv[i+1];
+    } else if (strcmp("--ppcdis", argv[i]) == 0 || strcmp("-p", argv[i]) == 0) {
+      if (i+3 >= argc) {
+        print_importppcdis_usage(8);
+      }
+      for (int j = 1; j <= 4; j++) {
+        if (!filesystem::is_regular_file(argv[i+j])) {
+          cout << "Could not open file " << argv[i+j] << '\n';
+          exit(13);
+        }
+      }
+      ppcdisInfoFiles.push_back({argv[i+1], argv[i+2], argv[i+3]});
+    }  else if (strcmp("--symbols", argv[i]) == 0 || strcmp("-s", argv[i]) == 0) {
+      if (i+1 >= argc) {
+        print_importppcdis_usage(9);
+      }
+      if (!filesystem::is_regular_file(argv[i+1])) {
+        cout << "Could not open file " << argv[i+1] << '\n';
+        exit(13);
+      }
+      symbolMap = argv[i+1];
+    }else {
+      print_importppcdis_usage(11);
+    }
+  }
+
+  if (projectProtoFile.empty()) {
+    print_create_usage(10);
+  }
+  if (symbolMap.size() == 0) {
+    print_create_usage(12);
+  }
+
+  Project project = Project::openProject(projectProtoFile);
+  loadAnalysisFromPpcdis(project.programLoader, ppcdisInfoFiles, symbolMap);
+  project.saveProject();
 }
 
 void cli_compare(int argc, char** argv) {

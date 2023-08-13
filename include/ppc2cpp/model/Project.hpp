@@ -24,7 +24,7 @@ struct ProjectCreationOptions {
 class Project {
 public:
   static Project createProject(const ProjectCreationOptions& options);
-  void openProject(const std::filesystem::path& projectFile);
+  static Project openProject(const std::filesystem::path& projectFile);
   void saveProject();
   void saveProjectAs(const std::filesystem::path& projectFile);
 
