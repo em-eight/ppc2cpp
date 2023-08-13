@@ -11,8 +11,10 @@ namespace ppc2cpp {
 */
 class NinProgramLoader : public ProgramLoader {
 public:
-  NinProgramLoader(const std::vector<std::filesystem::path>& binaryProtos);
+  NinProgramLoader(const std::vector<std::filesystem::path>& files);
   std::optional<ProgramLocation> getReferenceAtLocation(const ProgramLocation& location) override;
   int32_t moduleId2binaryIdx(int32_t module_id);
+
+  static bool isRvlProgram(const std::vector<std::filesystem::path>& files);
 };
 }
