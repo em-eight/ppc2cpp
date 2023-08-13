@@ -3,6 +3,7 @@
 
 #include "ppc2cpp/model/Project.hpp"
 #include "ppc2cpp/analysis/PpcdisAnalysis.hpp"
+#include "ppc2cpp/analysis/ProgramComparator.hpp"
 
 using namespace std;
 using namespace ppc2cpp;
@@ -109,8 +110,37 @@ void cli_import_ppcdis(int argc, char** argv) {
   project.saveProject();
 }
 
-void cli_compare(int argc, char** argv) {
+void print_compare_usage(int exitcode) {
+  // TODO
+  exit(exitcode);
+}
 
+void cli_compare(int argc, char** argv) {
+  if (argc != 4) {
+    print_compare_usage(15);
+  }
+
+  filesystem::path projectFile1 = argv[2];
+  filesystem::path projectFile2 = argv[3];
+
+  if (!filesystem::is_regular_file(projectFile1)) {
+    cout << "Could not open file " << projectFile1 << '\n';
+    exit(16);
+  }
+  if (!filesystem::is_regular_file(projectFile2)) {
+    cout << "Could not open file " << projectFile2 << '\n';
+    exit(16);
+  }
+
+  Project project1 = Project::openProject(projectFile1);
+  Project project2 = Project::openProject(projectFile2);
+
+  ProgramComparator programComparator(project1.programLoader, project2.programLoader);
+  if (programComparator.comparePrograms()) {
+    exit(0);
+  } else {
+    exit(-1);
+  }
 }
 
 void print_verb_usage(int exitcode) {
