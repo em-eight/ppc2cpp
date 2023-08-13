@@ -76,6 +76,15 @@ target_include_directories(ppc2cpp_core PUBLIC
 )
 target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${Protobuf_LIBRARIES} yaml-cpp)
 
+# ppc2cpp CLI  #################################################################
+
+add_executable(ppc2cpp src/cli/ppc2cpp.cpp)
+target_include_directories(ppc2cpp PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>  # <prefix>/include
+)
+target_link_libraries(ppc2cpp ppc2cpp_core)
+
 # project_demo #################################################################
 
 add_executable(project_demo test/program_loader_demo.cpp)

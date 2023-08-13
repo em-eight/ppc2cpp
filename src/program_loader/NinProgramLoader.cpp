@@ -66,4 +66,13 @@ std::optional<ProgramLocation> NinProgramLoader::getReferenceAtLocation(const Pr
   } else
     throw std::runtime_error("Unsupported RVL binary type at index " + location.binary_idx);
 }
+
+bool NinProgramLoader::isRvlProgram(const std::vector<std::filesystem::path>& files) {
+  for (const auto& file : files) {
+    // sophisticated RVL binary check
+    if (file.extension() != ".rel" && file.extension() != ".dol")
+      return false;
+  }
+  return true;
+}
 }

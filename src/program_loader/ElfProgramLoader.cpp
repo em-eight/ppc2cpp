@@ -118,4 +118,16 @@ std::optional<ProgramLocation> ElfProgramLoader::getReferenceAtLocation(const Pr
   if (maybeReloc) return maybeReloc->destination;
   else return std::nullopt;
 }
+  
+bool ElfProgramLoader::isElfProgram(const std::vector<std::filesystem::path>& files) {
+  constexpr char elfmagic[4] = {0x7f, 'E', 'L', 'F'};
+  char magic[4];
+  for (const auto& file : files) {
+    std::ifstream filestream(file);
+    filestream.read(magic, sizeof(magic));
+    if (std::memcmp(elfmagic, magic, sizeof(magic)) != 0)
+      return false;
+  }
+  return true;
+}
 }
