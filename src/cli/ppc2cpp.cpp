@@ -9,7 +9,13 @@ using namespace std;
 using namespace ppc2cpp;
 
 void print_create_usage(int exitcode) {
-  // TODO
+  cout << "Create a new ppc2cpp project from binaries\n"
+          "usage: ppc2cpp create --output project_path [--name project_name]"
+                " binary1 binary2...\n"
+          "  options:\n"
+          "    --output, -o     Created project file\n"
+          "    --name, -n       Project name. Defaults to output filename stem"
+                                                            " if not specified\n";
   exit(exitcode);
 }
 
@@ -54,7 +60,15 @@ void cli_create(int argc, char** argv) {
 }
 
 void print_importppcdis_usage(int exitcode) {
-  // TODO
+  cout << "Load analysis information from ppcdis to a project\n"
+          "usage: ppc2cpp importppcdis --input project --symbols symbolMap"
+                "[--ppcdis bin_yaml label_proto reloc_proto...]\n"
+          "  options:\n"
+          "    --input, -i     Project to import analysis to\n"
+          "    --symbols, -s   The YAML symbol map file in ppcdis format\n"
+          "    --ppcdis, -p    The three files to import. Should be in the order:"
+                " binary yaml, label proto file and then relocs proto file. "
+                "This flag can be repeated more than once\n";
   exit(exitcode);
 }
 
@@ -64,7 +78,7 @@ void cli_import_ppcdis(int argc, char** argv) {
   vector<PpcdisInfoFiles> ppcdisInfoFiles;
 
   for (int i = 2; i < argc; i++) {
-    if (strcmp("--in", argv[i]) == 0 || strcmp("-i", argv[i]) == 0) {
+    if (strcmp("--input", argv[i]) == 0 || strcmp("-i", argv[i]) == 0) {
       if (i+1 >= argc) {
         print_importppcdis_usage(7);
       }
@@ -99,10 +113,10 @@ void cli_import_ppcdis(int argc, char** argv) {
   }
 
   if (projectProtoFile.empty()) {
-    print_create_usage(10);
+    print_importppcdis_usage(10);
   }
   if (symbolMap.size() == 0) {
-    print_create_usage(12);
+    print_importppcdis_usage(12);
   }
 
   Project project = Project::openProject(projectProtoFile);
@@ -111,7 +125,9 @@ void cli_import_ppcdis(int argc, char** argv) {
 }
 
 void print_compare_usage(int exitcode) {
-  // TODO
+  cout << "Compare two equivalence of two programs. Exit code 0 if matches,"
+                                                        "other integer otherwise\n"
+          "usage: ppc2cpp compare projectFile1 projectFile2\n";
   exit(exitcode);
 }
 
@@ -144,11 +160,17 @@ void cli_compare(int argc, char** argv) {
 }
 
 void print_verb_usage(int exitcode) {
-  // TODO
+  std::cout << "Available verbs:\n\n"
+               "ppc2cpp create       Create a new pp2cpp project from a list of binaries\n"
+               "ppc2cpp importppcdis Import analysis to existing project from ppcdis\n"
+               "ppc2cpp compare      Compare two ppc2cpp programs\n";
   exit(exitcode);
 }
 
 int main(int argc, char** argv) {
+  if (argc <= 1) {
+    print_verb_usage(1);
+  }
   if (strcmp("create", argv[1]) == 0) {
     cli_create(argc, argv);
   } else if (strcmp("importppcdis", argv[1]) == 0) {
