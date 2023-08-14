@@ -2,6 +2,8 @@
 #include <cstring>
 
 #include "ppc2cpp/model/Project.hpp"
+#include "ppc2cpp/program_loader/ElfProgramLoader.hpp"
+#include "ppc2cpp/program_loader/NinProgramLoader.hpp"
 #include "ppc2cpp/analysis/PpcdisAnalysis.hpp"
 #include "ppc2cpp/analysis/ProgramComparator.hpp"
 
@@ -27,12 +29,12 @@ void cli_create(int argc, char** argv) {
       if (i+1 >= argc) {
         print_create_usage(2);
       }
-      options.projectFile = argv[i+1];
+      options.projectFile = argv[++i];
     } else if (strcmp("--name", argv[i]) == 0 || strcmp("-n", argv[i]) == 0) {
       if (i+1 >= argc) {
         print_create_usage(3);
       }
-      options.projectName = argv[i+1];
+      options.projectName = argv[++i];
     } else if (strcmp("--help", argv[i]) == 0 || strcmp("-h", argv[i]) == 0) {
       print_create_usage(0);  
     } else {
@@ -44,7 +46,7 @@ void cli_create(int argc, char** argv) {
     }
   }
 
-  if (options.projectFile.empty() == 0) {
+  if (options.projectFile.empty()) {
     print_create_usage(5);
   }
   if (options.projectName.size() == 0) {
@@ -52,6 +54,13 @@ void cli_create(int argc, char** argv) {
   }
   if (options.inputFiles.size() == 0) {
     print_create_usage(6);
+  }
+
+  // infer program loader type from binaries
+  if (ElfProgramLoader::isElfProgram(options.inputFiles)) {
+    options.programLoaderType = persistence::LOADER_ELF;
+  } else if (NinProgramLoader::isRvlProgram(options.inputFiles)) {
+    options.programLoaderType = persistence::LOADER_RVL;
   }
 
   Project::createProject(options);
@@ -62,7 +71,7 @@ void cli_create(int argc, char** argv) {
 void print_importppcdis_usage(int exitcode) {
   cout << "Load analysis information from ppcdis to a project\n"
           "usage: ppc2cpp importppcdis --input project --symbols symbolMap"
-                "[--ppcdis bin_yaml label_proto reloc_proto...]\n"
+                " [--ppcdis bin_yaml label_proto reloc_proto...]\n"
           "  options:\n"
           "    --input, -i     Project to import analysis to\n"
           "    --symbols, -s   The YAML symbol map file in ppcdis format\n"
@@ -86,18 +95,19 @@ void cli_import_ppcdis(int argc, char** argv) {
         cout << "Could not open file " << argv[i+1] << '\n';
         exit(13);
       }
-      projectProtoFile = argv[i+1];
+      projectProtoFile = argv[++i];
     } else if (strcmp("--ppcdis", argv[i]) == 0 || strcmp("-p", argv[i]) == 0) {
       if (i+3 >= argc) {
         print_importppcdis_usage(8);
       }
-      for (int j = 1; j <= 4; j++) {
+      for (int j = 1; j <= 3; j++) {
         if (!filesystem::is_regular_file(argv[i+j])) {
           cout << "Could not open file " << argv[i+j] << '\n';
           exit(13);
         }
       }
       ppcdisInfoFiles.push_back({argv[i+1], argv[i+2], argv[i+3]});
+      i+=3;
     }  else if (strcmp("--symbols", argv[i]) == 0 || strcmp("-s", argv[i]) == 0) {
       if (i+1 >= argc) {
         print_importppcdis_usage(9);
@@ -106,7 +116,7 @@ void cli_import_ppcdis(int argc, char** argv) {
         cout << "Could not open file " << argv[i+1] << '\n';
         exit(13);
       }
-      symbolMap = argv[i+1];
+      symbolMap = argv[++i];
     }else {
       print_importppcdis_usage(11);
     }
@@ -126,7 +136,7 @@ void cli_import_ppcdis(int argc, char** argv) {
 
 void print_compare_usage(int exitcode) {
   cout << "Compare two equivalence of two programs. Exit code 0 if matches,"
-                                                        "other integer otherwise\n"
+                                                        " other integer otherwise\n"
           "usage: ppc2cpp compare projectFile1 projectFile2\n";
   exit(exitcode);
 }

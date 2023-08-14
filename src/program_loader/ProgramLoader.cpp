@@ -82,9 +82,7 @@ void ProgramLoader::toProto(persistence::ProgramLoader* loaderProto) const {
   }
 
   this->symtab.toProto(loaderProto->mutable_symtab());
-  std::cout << "proto symtab " << loaderProto->symtab().symbols().size() << "\n";
   this->reloctab.toProto(loaderProto->mutable_reloctab());
-  std::cout << "proto symtab " << loaderProto->reloctab().relocs().size() << "\n";
 }
 
 ProgramLoaderPtr ProgramLoader::fromProto(const persistence::ProgramLoader* loaderProto) {
