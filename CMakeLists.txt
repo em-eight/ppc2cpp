@@ -94,6 +94,21 @@ target_include_directories(project_demo PUBLIC
 )
 target_link_libraries(project_demo ppc2cpp_core)
 
+# Install ######################################################################
+
+# libs
+install(TARGETS ppc2cpp_core EXPORT export_ppc2cpp
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+# executables
+install(TARGETS ppc2cpp DESTINATION bin)
+
+# headers
+install(DIRECTORY include/ DESTINATION include/${PROJECT_NAME})
+
 # Tests ########################################################################
 
 if(BUILD_TESTING)
