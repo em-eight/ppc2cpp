@@ -6,8 +6,11 @@
 #include <cstdint>
 
 #include <yaml-cpp/yaml.h>
+#include "ppcdisasm/ppc-relocations.h"
 
 #include "ppc2cpp/common/common.h"
+#include "ppc2cpp/common/endian.h"
+#include "ppc2cpp/common/insn_properties.h"
 #include "ppc2cpp/common/ProjectPersistenceException.hpp"
 #include "ppc2cpp/program_loader/Rel.hpp"
 #include "ppc2cpp/model/Symbol.hpp"
@@ -18,6 +21,26 @@
 #include "ppc2cpp/analysis/PpcdisAnalysis.hpp"
 
 namespace ppc2cpp {
+uint8_t getElfRelocTypeFromPpcdis(const ProgramLoaderPtr& pLoader, uint32_t ppcdisType, const ProgramLocation& location) {
+  if (ppcdisType == 3) { // SDA21
+    return R_PPC_EMB_SDA21;
+  } else if (ppcdisType == 2) { // ALGEBRAIC
+    return R_PPC_ADDR16_HA;
+  } else { // NORMAL (@h, @l or pointer in data)
+    if (pLoader->binaries[location.binary_idx]->sections[location.section_idx]->getType() != BinarySection::Type::SECTION_TYPE_TEXT) {
+      return R_PPC_ADDR32;
+    } else {
+      auto* buffer = pLoader->getBufferAtLocation(location).value();
+      const uint32_t insn = be32(*((uint32_t*)buffer));
+      if (isLis(insn)) {
+        return R_PPC_ADDR16_HI;
+      } else {
+        return R_PPC_ADDR16_LO;
+      }
+    }
+  }
+}
+
 void loadBinaryInfoFromPpcdis(ProgramLoaderPtr pLoader, const std::string& bin_yaml, const std::string& label_proto, const std::string& reloc_proto,
     const std::unordered_map<uint32_t, std::string>& namemap) {
   YAML::Node bin_config = YAML::LoadFile(bin_yaml);
@@ -48,8 +71,9 @@ void loadBinaryInfoFromPpcdis(ProgramLoaderPtr pLoader, const std::string& bin_y
   SymbolTable& symtab = pLoader->symtab;
   for (auto it : labelinfo.labels()) {
     uint32_t addr = it.first;
-    ASSERT(pLoader->resolveVMA(addr).has_value(), "Could not resolve VMA " + fmt::format("0x{:x}", addr));
-    ProgramLocation symLoc = pLoader->resolveVMA(addr).value();
+    auto maybeLoc = pLoader->resolveVMA(addr);
+    ASSERT(maybeLoc.has_value(), "Could not resolve VMA " + fmt::format("0x{:x}", addr));
+    ProgramLocation symLoc = maybeLoc.value();
 
     // Add symbol if it doesn't exist
     if (symtab.lookupByLocation(symLoc).has_value()) continue;
@@ -88,8 +112,8 @@ void loadBinaryInfoFromPpcdis(ProgramLoaderPtr pLoader, const std::string& bin_y
     ppcdis::Reloc ppcdisReloc = it.second;
     ASSERT(pLoader->resolveVMA(ppcdisReloc.target()).has_value(), "Could not resolve VMA " + fmt::format("0x{:x}", ppcdisReloc.target()));
     ProgramLocation target = pLoader->resolveVMA(ppcdisReloc.target()).value();
-    throw std::runtime_error("TODO: deduce reloc type");// TODO deduce reloc type
-    reloctab.push_back(Relocation(location, target, 69, ppcdisReloc.offset()));
+    uint8_t elfRelocType = getElfRelocTypeFromPpcdis(pLoader, ppcdisReloc.type(), location);
+    reloctab.push_back(Relocation(location, target, elfRelocType, ppcdisReloc.offset()));
   }
 }
 
