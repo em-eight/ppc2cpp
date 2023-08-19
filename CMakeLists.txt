@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 20)
 include(cmake/CPM.cmake)
 
 # RVL binary parser
-CPMAddPackage("gh:em-eight/ninutils#9c52c522b92ef4400d6a98b58ab9b2ae95f14252")
+CPMAddPackage("gh:em-eight/ninutils#dea3b7d")
 # ELF binary parser
 CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler

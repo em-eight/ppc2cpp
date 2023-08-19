@@ -74,4 +74,9 @@ inline bool isBranchConditionUnconditional(uint32_t insn) {
   uint8_t bo = getBO(insn);
   return ((bo >> 2) & 0x5) == 0x5;
 }
+
+inline bool isLis(uint32_t insn) {
+  uint32_t op = OP(insn);
+  return  op == 15;
+}
 }
