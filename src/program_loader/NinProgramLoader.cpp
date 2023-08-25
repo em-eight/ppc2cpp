@@ -1,7 +1,10 @@
 
 #include <fstream>
+#include <memory>
 
 #include "ppc2cpp/common/FileTypeException.hpp"
+#include "ppc2cpp/common/endian.h"
+#include "ppc2cpp/common/insn_properties.h"
 #include "ppc2cpp/program_loader/NinProgramLoader.hpp"
 #include "ppc2cpp/program_loader/Dol.hpp"
 #include "ppc2cpp/program_loader/Rel.hpp"
@@ -25,6 +28,35 @@ NinProgramLoader::NinProgramLoader(const std::vector<std::filesystem::path>& bin
       this->binaries.emplace_back(std::make_shared<Rel>(binaryPath));
     } else {
       throw FileTypeException("Unknown extension " + file_extension);
+    }
+  }
+
+  for (int i = 0; i < this->binaries.size(); i++) {
+    if (dynamic_pointer_cast<Rel>(this->binaries[i])) {
+      registerRel24Relocs(i);
+    }
+  }
+}
+
+void NinProgramLoader::registerRel24Relocs(int binary_idx) {
+  RelPtr rel = static_pointer_cast<Rel>(this->binaries[binary_idx]);
+  for (int i = 0; i < rel->sections.size(); i++) {
+    const auto& section = rel->sections[i];
+    if (section->type == BinarySection::Type::SECTION_TYPE_TEXT) {
+      uint32_t* buf = reinterpret_cast<uint32_t*>(section->getBuffer());
+      for (int j = 0; j < section->length/4; j++) {
+        uint32_t insn = be32(*(buf + j));
+        if (isBranchUncoditional(insn)) {
+          ProgramLocation source(binary_idx, i, 4*j);
+          int32_t branchVal = branchValue(insn);
+          int32_t targetOff = section->offset + 4*j + branchVal;
+          auto maybeTargetSection = rel->findSectionByOffset(targetOff);
+          if (maybeTargetSection.has_value()) {
+            ProgramLocation target(binary_idx, maybeTargetSection.value(), targetOff);
+            this->reloctab.push_back(Relocation(source, target, R_PPC_REL24, 0));
+          }
+        }
+      }
     }
   }
 }
