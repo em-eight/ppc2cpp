@@ -75,6 +75,7 @@ void loadBinaryInfoFromPpcdis(ProgramLoaderPtr pLoader, const std::string& bin_y
     ASSERT(maybeLoc.has_value(), "Could not resolve VMA " + fmt::format("0x{:x}", addr));
     ProgramLocation symLoc = maybeLoc.value();
 
+    if (binary_idx != symLoc.binary_idx) continue; // ppcdis sizes are only valid for the binary itself, but can contain other, to persist type information
     // Add symbol if it doesn't exist
     if (symtab.lookupByLocation(symLoc).has_value()) continue;
     std::string name;
@@ -89,6 +90,7 @@ void loadBinaryInfoFromPpcdis(ProgramLoaderPtr pLoader, const std::string& bin_y
     switch (ppcdisLabel.type())
     {
     case ppcdis::DATA:
+    case ppcdis::JUMPTABLE:
         symtab.push_back(Symbol(symLoc, ppcdisLabel.size(), name, DATA, GLOBAL));
         break;
     case ppcdis::FUNCTION:

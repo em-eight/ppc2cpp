@@ -32,13 +32,19 @@ public:
 
   // try to get section by VMA
   virtual std::optional<BinarySectionPtr> getSectionByAddress(uint32_t vma) const {
-    const uint32_t numSections = this->sections.size();
     for (const auto & sec : this->sections) {
       auto maybeBuffer = sec->getBufferAtAddress(vma);
       if (maybeBuffer.has_value()) return sec;
     }
     return std::nullopt;
-
+  }
+  
+  std::optional<int> findSectionByOffset(int off) const {
+    for (int i = 0; i < this->sections.size(); i++) {
+      const auto& sec = this->sections[i];
+      if (sec->offset >= off && sec->offset < off + sec->length) return i;
+    }
+    return std::nullopt;
   }
 
   virtual std::optional<BinarySectionPtr> getSectionIdxByName(std::string name) const {

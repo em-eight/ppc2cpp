@@ -3,10 +3,14 @@
 #include <sstream>
 
 #include "ppcdisasm/ppc-dis.hpp"
+#include "ppcdisasm/ppc-relocations.h"
 
 #include "ppc2cpp/common/endian.h"
 #include "ppc2cpp/common/common.h"
+#include "ppc2cpp/common/insn_properties.h"
 #include "ppc2cpp/analysis/ProgramComparator.hpp"
+
+#include "ppcdisasm/ppc-operands.h"
 
 using namespace ppcdisasm;
 
@@ -150,7 +154,10 @@ bool ProgramComparator::compareFunctionFlows(const Function& func1, const Functi
   return true;
 }
 
-// TODO: For now symName and off are only passed for error reporting. In the futur, error reporting should be moved to the parent
+// ------ data flow checker end
+// ------ Symbol based differ
+
+// TODO: For now symName and off are only passed for error reporting. In the future, error reporting should be moved to the parent
 // and this function should only return the diff message
 bool ProgramComparator::compareRelocations(const Relocation& reloc1, const Relocation& reloc2, const std::string& symName, int off) {
   std::optional<Symbol> maybeRelocSym1 = pLoader1->symtab.lookupByLocation(reloc1.destination);
@@ -190,20 +197,160 @@ bool ProgramComparator::compareRelocations(const Relocation& reloc1, const Reloc
   return true;
 }
 
-bool ProgramComparator::compareSymbols(const Symbol& sourceSym, const Symbol& targetSym) {
-  ProgramLocation loc2 = targetSym.location;
-  ProgramLocation loc1 = sourceSym.location;
+void logByteMismatchError(uint32_t* buf1, uint32_t* buf2, size_t size) {
+  // kinda shody
+  ppc_cpu_t dialect_raw = ppc_750cl_dialect | PPC_OPCODE_RAW; // raw mode: iterate all operands and only use base mnemonics
+  for (int i = 0; i < size/4; i++) {
+    uint32_t word1 = be32(*(buf1 + i));
+    uint32_t word2 = be32(*(buf2 + i));
+    std::cout << '+' << fmt::format("0x{:x}", 4*i) << '\t' << fmt::format("0x{:x}", word1) << '\t' << fmt::format("0x{:x}", word2)
+      << (word1 != word2 ? "  <-----" : "") << '\n';
+    /*if (word1 != word2) {
+      cout_insn_powerpc(word1, std::cout, dialect_raw);
+      std::cout << '\n';
+      cout_insn_powerpc(word2, std::cout, dialect_raw);
+      std::cout << '\n';
+    }*/
+  }
+  for (int i = 0; i < size%4; i++) {
+    uint8_t word1 = *((uint8_t*)(buf1 + size/4) + i);
+    uint8_t word2 = *((uint8_t*)(buf2 + size/4) + i);
+    std::cout << '+' << fmt::format("0x{:x}", size+i) << '\t' << fmt::format("0x{:x}", word1) << '\t' << fmt::format("0x{:x}", word2)
+      << (word1 != word2 ? "  <-----" : "") << '\n';
+  }
+}
 
-  if (sourceSym.size != targetSym.size) {
-    std::cout << targetSym.name << ": Target symbol size " << targetSym.size << " != " << sourceSym.size << "\n";
-    return false;
+uint32_t getRelocMask(uint8_t relocType) {
+  switch (relocType) {
+  case R_PPC_ADDR16:
+  case R_PPC_ADDR16_HA:
+  case R_PPC_ADDR16_HI:
+  case R_PPC_ADDR16_LO:
+    return 0xffff;
+  case R_PPC_ADDR14:
+  case R_PPC_ADDR14_BRNTAKEN:
+  case R_PPC_ADDR14_BRTAKEN:
+  case R_PPC_REL14:
+  case R_PPC_REL14_BRNTAKEN:
+  case R_PPC_REL14_BRTAKEN:
+    return 0xfffc;
+  case R_PPC_ADDR24:
+  case R_PPC_REL24:
+    return 0x3fffffc;
+  case R_PPC_ADDR32:
+    return 0xffffffff;
+  case R_PPC_EMB_SDA21:
+    return 0x1fffff;
+  default:
+#ifndef NDEBUG
+    std::cout << "Unknown relocations type " << relocType << '\n';
+#endif
+    return 0;
+  }
+}
+
+bool ProgramComparator::compareData(const Symbol& sourceSym, const Symbol& targetSym) {
+  int compareSize = std::max(sourceSym.size, targetSym.size);
+  std::optional<uint8_t*> buf1 = pLoader1->getBufferAtLocation(targetSym.location);
+  std::optional<uint8_t*> buf2 = pLoader2->getBufferAtLocation(sourceSym.location);
+  ASSERT(buf1.has_value(), ("Failed to get buffer to symbol " + targetSym.name + " at " + pLoader1->locationString(targetSym.location)));
+  ASSERT(buf2.has_value(), ("Failed to get buffer to symbol " + sourceSym.name + " at " + pLoader2->locationString(sourceSym.location)));
+
+  if (sourceSym.location.section_offset % 4 != 0 || sourceSym.size % 4 != 0 ||
+      targetSym.location.section_offset % 4 != 0 || targetSym.size % 4 != 0) { // if both symbols are 4-word aligned
+    // check for relocations every 4 bytes
+    for (int off = 0; off < compareSize; off+=4) {
+      ProgramLocation pos2 = sourceSym.location + off;
+      ProgramLocation pos1 = targetSym.location + off;
+      std::optional<Relocation> maybeReloc2 = pLoader2->reloctab.lookupBySource(pos2);
+      std::optional<Relocation> maybeReloc1 = pLoader1->reloctab.lookupBySource(pos1);
+
+      if (maybeReloc1.has_value() != maybeReloc2.has_value()) {
+        std::cout << targetSym.name << "+" << fmt::format("0x{:x}", off) << ": not both programs have relocation, source: " <<
+          maybeReloc1.has_value() << " != target: " << maybeReloc2.has_value() << "\n";
+        return false;
+      }
+
+      std::optional<uint8_t*> buf1 = pLoader1->getBufferAtLocation(pos1);
+      std::optional<uint8_t*> buf2 = pLoader2->getBufferAtLocation(pos2);
+      ASSERT(buf1.has_value(), ("Failed to get buffer to symbol " + targetSym.name + " at " + pLoader1->locationString(pos1)));
+      ASSERT(buf2.has_value(), ("Failed to get buffer to symbol " + sourceSym.name + " at " + pLoader2->locationString(pos2)));
+      uint32_t* wordPtr1 = reinterpret_cast<uint32_t*>(buf1.value());
+      uint32_t* wordPtr2 = reinterpret_cast<uint32_t*>(buf2.value());
+
+      if (maybeReloc2.has_value()) {
+        if (!compareRelocations(maybeReloc1.value(), maybeReloc2.value(), targetSym.name, off)) return false;
+      } else {
+        if (*wordPtr1 != *wordPtr2) {
+          std::cout << targetSym.name << ": data mismatch\n";
+          logByteMismatchError(reinterpret_cast<uint32_t*>(buf1.value()-off), reinterpret_cast<uint32_t*>(buf2.value()-off), compareSize);
+          return false;
+        }
+      }
+    }
+  } else {
+    if (std::memcmp(buf1.value(), buf2.value(), compareSize) != 0) {
+      std::cout << targetSym.name << ": byte mismatch\n";
+      logByteMismatchError(reinterpret_cast<uint32_t*>(buf1.value()), reinterpret_cast<uint32_t*>(buf2.value()), compareSize);
+      return false;
+    }
   }
 
-  std::optional<uint8_t*> buf1 = pLoader1->getBufferAtLocation(loc1);
-  ASSERT(buf1.has_value(), ("Failed to get buffer to symbol " + targetSym.name + " at " + pLoader1->locationString(loc1)));
-  std::optional<uint8_t*> buf2 = pLoader2->getBufferAtLocation(loc2);
-  ASSERT(buf2.has_value(), ("Failed to get buffer to symbol " + targetSym.name + " at " + pLoader2->locationString(loc2)));
+  return true;
+}
 
+bool ProgramComparator::compareFunctions(const Symbol& sourceSym, const Symbol& targetSym) {
+  ASSERT(fabs(sourceSym.size - targetSym.size) < 8, "Symbol sizes are wildly different " + std::to_string(sourceSym.size) + " vs " + std::to_string(targetSym.size));
+  int compareSize = std::max(sourceSym.size, targetSym.size);
+  for (int off = 0; off < compareSize; off+=4) {
+    ProgramLocation pos2 = sourceSym.location + off;
+    ProgramLocation pos1 = targetSym.location + off;
+    std::optional<Relocation> maybeReloc2 = pLoader2->reloctab.lookupBySource(pos2);
+    std::optional<Relocation> maybeReloc1 = pLoader1->reloctab.lookupBySource(pos1);
+
+    if (maybeReloc1.has_value() != maybeReloc2.has_value()) {
+      std::cout << targetSym.name << "+" << fmt::format("0x{:x}", off) << ": not both programs have relocation, source: " <<
+        maybeReloc1.has_value() << " != target: " << maybeReloc2.has_value() << "\n";
+      return false;
+    }
+
+    std::optional<uint8_t*> buf1 = pLoader1->getBufferAtLocation(pos1);
+    std::optional<uint8_t*> buf2 = pLoader2->getBufferAtLocation(pos2);
+    ASSERT(buf1.has_value(), ("Failed to get buffer to symbol " + targetSym.name + " at " + pLoader1->locationString(pos1)));
+    ASSERT(buf2.has_value(), ("Failed to get buffer to symbol " + sourceSym.name + " at " + pLoader2->locationString(pos2)));
+    uint32_t* wordPtr1 = reinterpret_cast<uint32_t*>(buf1.value());
+    uint32_t* wordPtr2 = reinterpret_cast<uint32_t*>(buf2.value());
+
+    if (maybeReloc2.has_value()) {
+      if (!compareRelocations(maybeReloc1.value(), maybeReloc2.value(), targetSym.name, off)) return false;
+
+      const Relocation& reloc = maybeReloc1.value();
+      uint32_t relocMask = getRelocMask(reloc.type);
+      if ((relocMask | be32(*wordPtr1)) != (relocMask | be32(*wordPtr2))) {
+        std::cout << targetSym.name << ": function mismatch\n";
+        logByteMismatchError(reinterpret_cast<uint32_t*>(buf1.value()-off), reinterpret_cast<uint32_t*>(buf2.value()-off), compareSize);
+        return false;
+      }
+    } else {
+      if (*wordPtr1 != *wordPtr2) {
+        std::cout << targetSym.name << ": function mismatch\n";
+        logByteMismatchError(reinterpret_cast<uint32_t*>(buf1.value()-off), reinterpret_cast<uint32_t*>(buf2.value()-off), compareSize);
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool ProgramComparator::compareSymbols(const Symbol& sourceSym, const Symbol& targetSym) {
+  /*if (sourceSym.size != targetSym.size) {
+    std::cout << targetSym.name << ": Target symbol size " << targetSym.size << " != " << sourceSym.size << "\n";
+    return false;
+  }*/ // not really needed for equivalence
+
+  const ProgramLocation& loc2 = targetSym.location;
+  const ProgramLocation& loc1 = sourceSym.location;
   BinarySection::Type symSectionType2 = pLoader2->binaries[loc2.binary_idx]->sections[loc2.section_idx]->getType();
   BinarySection::Type symSectionType1 = pLoader1->binaries[loc1.binary_idx]->sections[loc1.section_idx]->getType();
   if (symSectionType1 != symSectionType2) {
@@ -212,36 +359,23 @@ bool ProgramComparator::compareSymbols(const Symbol& sourceSym, const Symbol& ta
   }
 
   // TODO: Also support data flow equivalence some day
-  if (symSectionType1 != BinarySection::Type::SECTION_TYPE_BSS && std::memcmp(buf1.value(), buf2.value(), targetSym.size) != 0) {
-    std::cout << targetSym.name << ": byte mismatch\n";
-    // TODO: print what is wrong or sth
-    return false;
-  }
+  if (symSectionType1 == BinarySection::Type::SECTION_TYPE_TEXT) {
+    if (!compareFunctions(sourceSym, targetSym)) return false;
+  } else if (symSectionType1 == BinarySection::Type::SECTION_TYPE_DATA) {
+    if (!compareData(sourceSym, targetSym)) return false;
+  } else { // .bss/noload
 
-  // relocations inside symbol must match
-  for (int off = 0; off < targetSym.size; off++) {
-    ProgramLocation pos2 = loc2 + off;
-    ProgramLocation pos1 = loc1 + off;
-    std::optional<Relocation> maybeReloc2 = pLoader2->reloctab.lookupBySource(pos2);
-    std::optional<Relocation> maybeReloc1 = pLoader2->reloctab.lookupBySource(pos1);
-
-    if (maybeReloc1.has_value() != maybeReloc2.has_value()) {
-      std::cout << targetSym.name << "+" << fmt::format("0x{:x}", off) << ": not both programs have relocation, source: " <<
-        maybeReloc1.has_value() << " != target: " << maybeReloc2.has_value() << "\n";
-      return false;
-    }
-
-    if (maybeReloc2.has_value()) {
-      if (!compareRelocations(maybeReloc1.value(), maybeReloc2.value(), targetSym.name, off)) return false;
-    }
   }
 
   return true;
 }
 
 bool ProgramComparator::comparePrograms() {
+  disassemble_init_powerpc();
+
   for (int i = 0; i < pLoader2->symtab.num_symbols(); i++) {
     const Symbol& targetSym = pLoader2->symtab[i];
+    std::cout << "check " << i << " " <<  targetSym.name << '@' << pLoader2->locationString(targetSym.location) << ", " << targetSym.size << '\n';
     if (targetSym.symbolBinding == SymbolBinding::LOCAL) continue; // leave local symbol comparison for later
     std::optional<Symbol> maybeSourceSym = pLoader1->symtab.lookupByName(targetSym.name);
     if (!maybeSourceSym) {

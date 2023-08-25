@@ -14,6 +14,7 @@ public:
   NinProgramLoader(const std::vector<std::filesystem::path>& files);
   std::optional<ProgramLocation> getReferenceAtLocation(const ProgramLocation& location) override;
   int32_t moduleId2binaryIdx(int32_t module_id);
+  void registerRel24Relocs(int binary_idx);
 
   static bool isRvlProgram(const std::vector<std::filesystem::path>& files);
 };

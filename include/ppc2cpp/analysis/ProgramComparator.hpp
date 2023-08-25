@@ -14,6 +14,8 @@ public:
 
   bool comparePrograms();
   bool compareRelocations(const Relocation& reloc1, const Relocation& reloc2, const std::string& symName, int off);
+  bool compareData(const Symbol& sourceSym, const Symbol& targetSym);
+  bool compareFunctions(const Symbol& sourceSym, const Symbol& targetSym);
   bool compareSymbols(const Symbol& sourceSym, const Symbol& targetSym);
   bool compareFunctionFlows(const Function& func1, const Function& func2);
 
