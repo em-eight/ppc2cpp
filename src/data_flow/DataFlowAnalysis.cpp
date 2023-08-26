@@ -61,9 +61,11 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
   for (uint32_t pc = func.cfg.blocks[blockIdx].start; pc <= func.cfg.blocks[blockIdx].end; pc++) {
     const uint32_t insn = be32(*(funcPtr + pc));
 
+#ifndef NDEBUG
     std::cout << "L:" << pc << "  ";
     cout_insn_powerpc(insn, std::cout, dialect_raw);
     std::cout << "\n";
+#endif
 
     std::vector<VarNodePtr> insnInputs;
     std::vector<VarNodePtr> insnOutputs;

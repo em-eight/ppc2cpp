@@ -1,11 +1,15 @@
 
 #include <cstring>
+#include <fstream>
 
 #include "ppc2cpp/model/Project.hpp"
 #include "ppc2cpp/program_loader/ElfProgramLoader.hpp"
 #include "ppc2cpp/program_loader/NinProgramLoader.hpp"
 #include "ppc2cpp/analysis/PpcdisAnalysis.hpp"
 #include "ppc2cpp/analysis/ProgramComparator.hpp"
+#include "ppc2cpp/data_flow/DataFlowAnalysis.hpp"
+#include "ppc2cpp/control_flow/ControlFlowAnalysis.hpp"
+#include "ppc2cpp/data_flow/DfgVisualizer.hpp"
 
 using namespace std;
 using namespace ppc2cpp;
@@ -134,8 +138,68 @@ void cli_import_ppcdis(int argc, char** argv) {
   project.saveProject();
 }
 
+void print_checkflow_usage(int exitcode) {
+  cout << "Compare the equivalence of functions between two programs, by comparing their data flow graphs. Exit code 0 if all match,"
+                                                        " other integer otherwise\n"
+          "usage: ppc2cpp checkflow projectFile1 projectFile2 function_name1 function_name2 ...\n";
+  exit(exitcode);
+}
+
+void cli_checkflow(int argc, char** argv) {
+  if (argc < 5) {
+    print_checkflow_usage(20);
+  }
+
+  filesystem::path projectFile1 = argv[2];
+  filesystem::path projectFile2 = argv[3];
+
+  if (!filesystem::is_regular_file(projectFile1)) {
+    cout << "Could not open file " << projectFile1 << '\n';
+    exit(21);
+  }
+  if (!filesystem::is_regular_file(projectFile2)) {
+    cout << "Could not open file " << projectFile2 << '\n';
+    exit(21);
+  }
+
+  Project project1 = Project::openProject(projectFile1);
+  Project project2 = Project::openProject(projectFile2);
+
+  ProgramComparator programComparator(project1.programLoader, project2.programLoader);
+  for (int i = 4; i < argc; i++) {
+    auto maybeSym1 = project1.programLoader->symtab.lookupByName(argv[i]);
+    auto maybeSym2 = project2.programLoader->symtab.lookupByName(argv[i]);
+    if (!maybeSym1.has_value()) {
+      std::cout << "Could not find " << argv[i] << " in first project\n";
+      exit(22);
+    }
+    if (!maybeSym2.has_value()) {
+      std::cout << "Could not find " << argv[i] << " in second project\n";
+      exit(22);
+    }
+
+    Function func1(maybeSym1.value());
+    Function func2(maybeSym2.value());
+    ControlFlowAnalysis cfa1(project1.programLoader);
+    ControlFlowAnalysis cfa2(project2.programLoader);
+    cfa1.functionCFA(func1);
+    cfa2.functionCFA(func2);
+    DataFlowAnalysis dfa1(project1.programLoader);
+    DataFlowAnalysis dfa2(project2.programLoader);
+    dfa1.functionDFA(func1);
+    dfa2.functionDFA(func2);
+
+    bool funcsEqual = programComparator.compareFunctionFlows(func1, func2);
+    if (!funcsEqual) {
+      std::cout << "Function " << argv[i] << " implementations are not equivalent\n";
+      exit(23);
+    }
+  }
+  exit(0);
+}
+
 void print_compare_usage(int exitcode) {
-  cout << "Compare two equivalence of two programs. Exit code 0 if matches,"
+  cout << "Compare the equivalence of two programs. Exit code 0 if matches,"
                                                         " other integer otherwise\n"
           "usage: ppc2cpp compare projectFile1 projectFile2\n";
   exit(exitcode);
@@ -169,10 +233,72 @@ void cli_compare(int argc, char** argv) {
   }
 }
 
+void print_viz_usage(int exitcode) {
+  cout << "Visualize symbols in a program\n"
+          "usage: ppc2cpp importppcdis --input project --output output symbolName\n"
+          "  options:\n"
+          "    --input, -i     ppc2cpp program that contains the symbol\n"
+          "    --output, -o    File to write visualization to\n";
+  exit(exitcode);
+}
+
+void cli_viz(int argc, char** argv) {
+  filesystem::path projectFile;
+  filesystem::path vizFile;
+  string symName;
+
+  for (int i = 2; i < argc; i++) {
+    if (strcmp("--out", argv[i]) == 0 || strcmp("-o", argv[i]) == 0) {
+      if (i+1 >= argc) {
+        print_viz_usage(2);
+      }
+      vizFile = argv[++i];
+    } else if (strcmp("--input", argv[i]) == 0 || strcmp("-i", argv[i]) == 0) {
+      if (i+1 >= argc) {
+        print_viz_usage(3);
+      }
+      projectFile = argv[++i];
+    } else if (strcmp("--help", argv[i]) == 0 || strcmp("-h", argv[i]) == 0) {
+      print_viz_usage(0);  
+    } else {
+      symName = argv[i];
+    }
+  }
+
+  if (projectFile.empty() || vizFile.empty() || symName.empty()) {
+    print_viz_usage(8);
+  }
+
+  if (!filesystem::is_regular_file(projectFile)) {
+    cout << "Could not open file " << projectFile << '\n';
+    exit(16);
+  }
+
+  Project project = Project::openProject(projectFile);
+
+  auto maybeSym = project.programLoader->symtab.lookupByName(symName);
+  if (!maybeSym.has_value()) {
+    std::cout << "Could not find " << symName << " in project\n";
+    exit(22);
+  }
+
+  Function func(maybeSym.value());
+  ControlFlowAnalysis cfa(project.programLoader);
+  cfa.functionCFA(func);
+  
+  DataFlowAnalysis dfa(project.programLoader);
+  dfa.functionDFA(func);
+
+  ofstream dotfilestrm(vizFile, ios::out | ios::trunc);
+  outputDfgDot(dotfilestrm, project.programLoader, func);
+}
+
 void print_verb_usage(int exitcode) {
   std::cout << "Available verbs:\n\n"
                "ppc2cpp create       Create a new pp2cpp project from a list of binaries\n"
                "ppc2cpp importppcdis Import analysis to existing project from ppcdis\n"
+               "ppc2cpp checkflow    Compare function data flow graphs\n"
+               "ppc2cpp viz          Visualize function control flow and data flow\n"
                "ppc2cpp compare      Compare two ppc2cpp programs\n";
   exit(exitcode);
 }
@@ -185,8 +311,12 @@ int main(int argc, char** argv) {
     cli_create(argc, argv);
   } else if (strcmp("importppcdis", argv[1]) == 0) {
     cli_import_ppcdis(argc, argv);
+  } else if (strcmp("checkflow", argv[1]) == 0) {
+    cli_checkflow(argc, argv);
   } else if (strcmp("compare", argv[1]) == 0) {
     cli_compare(argc, argv);
+  } else if (strcmp("viz", argv[1]) == 0) {
+    cli_viz(argc, argv);
   } else if (strcmp("--help", argv[1]) == 0 || strcmp("-h", argv[1]) == 0) {
     print_verb_usage(0);
   } else {

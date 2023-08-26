@@ -11,6 +11,7 @@ public:
   ControlFlowGraph cfg;
   DataFlowGraph dfg;
 
+  Function(Symbol symbol) : Symbol(symbol) {}
   Function(ProgramLocation location, std::string name) : Symbol(location, name, FUNCTION) {}
   Function(ProgramLocation location, uint32_t size, std::string name) : Symbol(location, size, name, FUNCTION) {}
 
