@@ -8,18 +8,27 @@ on:
     branches: [ main ]
 
 jobs:
-  checkout-and-check-formatting:
+  build-and-push:
     runs-on: ubuntu-latest
-
+    env:
+      ARTIFACT_NAME: ppc2cpp-${{ runner.os }}
     steps:
     - uses: actions/checkout@v3
+
     - name: Install protobuf
       run: sudo apt-get install -y protobuf-compiler
     - name: CMake generate
       run: |
         cmake -B build \
+          -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
           -DCMAKE_BUILD_TYPE=Release \
           -DProtobuf_PROTOC_EXECUTABLE="$(which protoc)" \
           -DProtobuf_LIBRARY="$(pkg-config --libs protobuf)"
     - name: Build
       run: cmake --build build -j
+    
+    - uses: actions/upload-artifact@v3
+#      if: github.ref == 'refs/heads/main' && github.repository == 'em-eight/ppc2cpp'
+      with:
+        name: $ARTIFACT_NAME
+        path: $ARTIFACT_NAME
