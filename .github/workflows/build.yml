@@ -1,0 +1,25 @@
+# Build and push artifacts
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  checkout-and-check-formatting:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install protobuf
+      run: sudo apt-get install -y protobuf-compiler
+    - name: CMake generate
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DProtobuf_PROTOC_EXECUTABLE="$(which protoc)" \
+          -DProtobuf_LIBRARY="$(pkg-config --libs protobuf)"
+    - name: Build
+      run: cmake --build build -j
