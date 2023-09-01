@@ -26,19 +26,20 @@ jobs:
         git clone https://github.com/Microsoft/vcpkg.git
         ./vcpkg/bootstrap-vcpkg.sh
         vcpkg install protobuf protobuf:x64-windows
+        vcpkg owns protobuf
+        ls vcpkg/scripts/buildsystems/vcpkg.cmake
     - name: CMake generate
-      if: matrix.os == 'ubuntu-latest'
       env:
         ARTIFACT_NAME: ppc2cpp-${{ runner.os }}
-        WINDOWS_FLAGS: ${{ matrix.os == 'windows-latest' && '-S . -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake' || '' }}
+        WINDOWS_FLAGS: ${{ matrix.os == 'windows-latest' && '-S . -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_GENERATOR_PLATFORM=x64' || '' }}
       run: |
+        echo $WINDOWS_FLAGS
         cmake -B build \
           -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=OFF \
-          $WINDOWS_FLAGS \
-          -DProtobuf_PROTOC_EXECUTABLE="$(which protoc)" \
-          -DProtobuf_LIBRARY="$(pkg-config --libs protobuf)"
+          $WINDOWS_FLAGS
+      shell: bash
     - name: Build
       run: cmake --build build --target install -j
     
