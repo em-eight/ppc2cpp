@@ -9,20 +9,34 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
 
     - name: Install protobuf
+      if: matrix.os == 'ubuntu-latest'
       run: sudo apt-get install -y protobuf-compiler
+    - name: windows vcpkg shit
+      # https://vcpkg.io/en/getting-started.html
+      if: matrix.os == 'windows-latest'
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git
+        ./vcpkg/bootstrap-vcpkg.sh
+        vcpkg install protobuf protobuf:x64-windows
     - name: CMake generate
+      if: matrix.os == 'ubuntu-latest'
       env:
         ARTIFACT_NAME: ppc2cpp-${{ runner.os }}
+        WINDOWS_FLAGS: ${{ matrix.os == 'windows-latest' && '-S . -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake' || '' }}
       run: |
         cmake -B build \
           -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=OFF \
+          $WINDOWS_FLAGS \
           -DProtobuf_PROTOC_EXECUTABLE="$(which protoc)" \
           -DProtobuf_LIBRARY="$(pkg-config --libs protobuf)"
     - name: Build
