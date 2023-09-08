@@ -90,13 +90,13 @@ std::optional<ProgramLocation> NinProgramLoader::getReferenceAtLocation(const Pr
     }
 
     int32_t binary_idx = moduleId2binaryIdx(relReloc.src_module_id);
-    if (binary_idx < 0) throw std::runtime_error("Could not find module with id " + relReloc.src_module_id);
+    if (binary_idx < 0) throw std::runtime_error("Could not find module with id " + std::to_string(relReloc.src_module_id));
 
     RelPtr targetRel = static_pointer_cast<Rel>(binaries[binary_idx]);
 
     return ProgramLocation(binary_idx, relReloc.src_section_idx, relReloc.src_offset);
   } else
-    throw std::runtime_error("Unsupported RVL binary type at index " + location.binary_idx);
+    throw std::runtime_error("Unsupported RVL binary type at index " + std::to_string(location.binary_idx));
 }
 
 bool NinProgramLoader::isRvlProgram(const std::vector<std::filesystem::path>& files) {
