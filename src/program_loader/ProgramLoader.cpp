@@ -18,7 +18,7 @@ ProgramLoaderPtr ProgramLoader::loadProgram(int32_t loaderProtoVersion, persiste
   } else if (loaderType == persistence::LOADER_ELF) {
     programLoader = std::make_shared<ElfProgramLoader>(ElfProgramLoader(binary_paths));
   } else {
-    throw new ProjectPersistenceException("Unknown program loader type " + loaderType);
+    throw new ProjectPersistenceException("Unknown program loader type " + std::to_string(static_cast<int>(loaderType)));
   }
 
   programLoader->loaderType = loaderType;

@@ -15,6 +15,11 @@
 using namespace ppcdisasm;
 
 namespace ppc2cpp {
+#ifdef __clang__
+// clang doesn't like typeid(*ptr)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
+#endif
 bool ProgramComparator::compareVarNodes(const Function& func1, const Function& func2, const VarNodePtr& var1, const VarNodePtr& var2) {
   ppc_cpu_t dialect = ppc_750cl_dialect;
 
@@ -82,6 +87,9 @@ bool ProgramComparator::compareVarNodes(const Function& func1, const Function& f
 
   return true;
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 std::string vectorToString(const std::vector<uint32_t>& vec) {
     std::stringstream ss;
@@ -300,7 +308,7 @@ bool ProgramComparator::compareData(const Symbol& sourceSym, const Symbol& targe
 }
 
 bool ProgramComparator::compareFunctions(const Symbol& sourceSym, const Symbol& targetSym) {
-  ASSERT(fabs(sourceSym.size - targetSym.size) < 8, "Symbol sizes are wildly different " + std::to_string(sourceSym.size) + " vs " + std::to_string(targetSym.size));
+  ASSERT(std::abs((int)sourceSym.size - (int)targetSym.size) < 8, "Symbol sizes are wildly different " + std::to_string(sourceSym.size) + " vs " + std::to_string(targetSym.size));
   int compareSize = std::max(sourceSym.size, targetSym.size);
   for (int off = 0; off < compareSize; off+=4) {
     ProgramLocation pos2 = sourceSym.location + off;

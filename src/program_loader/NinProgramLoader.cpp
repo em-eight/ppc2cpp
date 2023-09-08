@@ -2,7 +2,6 @@
 #include <fstream>
 #include <memory>
 
-#include "ppc2cpp/common/FileTypeException.hpp"
 #include "ppc2cpp/common/endian.h"
 #include "ppc2cpp/common/insn_properties.h"
 #include "ppc2cpp/program_loader/NinProgramLoader.hpp"
@@ -27,7 +26,7 @@ NinProgramLoader::NinProgramLoader(const std::vector<std::filesystem::path>& bin
     } else if (file_extension == ".rel") {
       this->binaries.emplace_back(std::make_shared<Rel>(binaryPath));
     } else {
-      throw FileTypeException("Unknown extension " + file_extension);
+      throw std::runtime_error("Unknown extension " + file_extension);
     }
   }
 

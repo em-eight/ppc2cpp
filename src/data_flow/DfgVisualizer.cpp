@@ -10,6 +10,11 @@
 using namespace ppcdisasm;
 
 namespace ppc2cpp {
+#ifdef __clang__
+// clang doesn't like typeid(*ptr)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
+#endif
 std::string getDotLabel(const ProgramLoaderPtr& programLoader, const Function& func, const VarNodePtr& var) {
   if (DataFlowNodePtr flowVar = dynamic_pointer_cast<DataFlowNode>(var)) {
     uint32_t* funcPtr = (uint32_t*) programLoader->getBufferAtLocation(func.location).value();
@@ -58,6 +63,9 @@ std::string getNodeId(const VarNodePtr& var) {
     } else throw std::runtime_error("Varnode type " + std::string(typeid(*var).name()) + " does not belong to a flow graph");
   } else throw std::runtime_error("Varnode type " + std::string(typeid(*var).name()) + " does not belong to a flow graph");
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 void outputNode(std::ostream& os, const ProgramLoaderPtr& programLoader, const Function& func, const VarNodePtr& var) {
   os << "  "; // indentation
