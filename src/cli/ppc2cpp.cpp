@@ -141,7 +141,7 @@ void cli_import_ppcdis(int argc, char** argv) {
 void print_checkflow_usage(int exitcode) {
   cout << "Compare the equivalence of functions between two programs, by comparing their data flow graphs. Exit code 0 if all match,"
                                                         " other integer otherwise\n"
-          "usage: ppc2cpp checkflow projectFile1 projectFile2 function_name1 function_name2 ...\n";
+          "usage: ppc2cpp checkflow projectFile1 projectFile2 function1 function2 ...\n";
   exit(exitcode);
 }
 
@@ -167,8 +167,24 @@ void cli_checkflow(int argc, char** argv) {
 
   ProgramComparator programComparator(project1.programLoader, project2.programLoader);
   for (int i = 4; i < argc; i++) {
-    auto maybeSym1 = project1.programLoader->symtab.lookupByName(argv[i]);
-    auto maybeSym2 = project2.programLoader->symtab.lookupByName(argv[i]);
+    std::optional<Symbol> maybeSym1, maybeSym2;
+    if (uint32_t vma = std::atol(argv[i])) {
+      auto maybeLoc1 = project1.programLoader->resolveVMA(vma);
+      auto maybeLoc2 = project2.programLoader->resolveVMA(vma);
+      if (!maybeLoc1.has_value()) {
+        std::cout << "Could find VMA " << vma << " in first program\n";
+        exit(22);
+      }
+      if (!maybeLoc2.has_value()) {
+        std::cout << "Could find VMA " << vma << " in first program\n";
+        exit(22);
+      }
+      maybeSym1 = project1.programLoader->symtab.lookupByName(argv[i]);
+      maybeSym2 = project2.programLoader->symtab.lookupByName(argv[i]);
+    } else {
+      maybeSym1 = project1.programLoader->symtab.lookupByName(argv[i]);
+      maybeSym2 = project2.programLoader->symtab.lookupByName(argv[i]);
+    }
     if (!maybeSym1.has_value()) {
       std::cout << "Could not find " << argv[i] << " in first project\n";
       exit(22);
