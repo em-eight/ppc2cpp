@@ -52,6 +52,8 @@ if(DEFINED Protobuf_LIBRARY)
   else()
     set(Protobuf_USE_STATIC_LIBS OFF)
   endif()
+else()
+  set(Protobuf_USE_STATIC_LIBS ON)   # Use static libs by default
 endif()
 
 include(FindProtobuf)
