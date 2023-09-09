@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 20)
 include(cmake/CPM.cmake)
 
 # RVL binary parser
-CPMAddPackage("gh:em-eight/ninutils#dea3b7d")
+CPMAddPackage("gh:em-eight/ninutils#81b4910")
 # ELF binary parser
 CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler
@@ -19,7 +19,7 @@ CPMAddPackage(
   NAME ppcdisasm-cpp
   OPTIONS "BUILD_TESTING OFF"
   GITHUB_REPOSITORY "em-eight/ppcdisasm-cpp"
-  GIT_TAG "4e2c2e1"
+  GIT_TAG "d7424cb"
 )
 # yaml
 CPMAddPackage(
