@@ -79,8 +79,15 @@ ProgramLocation ElfProgramLoader::getElfRelocDest(const symbol_section_accessor&
     return this->getElfSymbolLocation(binaryIdx, section_index, value, interpretSymValueAsAddr);
   } else {
     auto symLoc = this->resolveByName(name);
-    ASSERT(symLoc.has_value(), ("Could not resolve relocation target with name " + name + " at " + this->locationString(relocSource)));
-    return symLoc.value();
+    if (symLoc.has_value()) {
+      return symLoc.value();
+    } else {
+      // reference to undefined symbol
+#ifndef NDEBUG
+      std::cout << "Warning: Reference to undefined symbol " << name << " at " << this->locationString(relocSource) << '\n';
+#endif
+      return ProgramLocation(0, 0, 0);
+    }
   }
 }
 

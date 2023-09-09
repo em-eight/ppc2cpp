@@ -145,6 +145,15 @@ void print_checkflow_usage(int exitcode) {
   exit(exitcode);
 }
 
+ProgramLocation getLocOrExit(const Project& project, uint32_t vma) {
+  auto maybeLoc = project.programLoader->resolveVMA(vma);
+  if (!maybeLoc.has_value()) {
+    std::cout << "Could find VMA " << vma << " in program\n";
+    exit(22);
+  }
+  return maybeLoc.value();
+}
+
 void cli_checkflow(int argc, char** argv) {
   if (argc < 5) {
     print_checkflow_usage(20);
@@ -169,18 +178,10 @@ void cli_checkflow(int argc, char** argv) {
   for (int i = 4; i < argc; i++) {
     std::optional<Symbol> maybeSym1, maybeSym2;
     if (uint32_t vma = std::atol(argv[i])) {
-      auto maybeLoc1 = project1.programLoader->resolveVMA(vma);
-      auto maybeLoc2 = project2.programLoader->resolveVMA(vma);
-      if (!maybeLoc1.has_value()) {
-        std::cout << "Could find VMA " << vma << " in first program\n";
-        exit(22);
-      }
-      if (!maybeLoc2.has_value()) {
-        std::cout << "Could find VMA " << vma << " in first program\n";
-        exit(22);
-      }
-      maybeSym1 = project1.programLoader->symtab.lookupByName(argv[i]);
-      maybeSym2 = project2.programLoader->symtab.lookupByName(argv[i]);
+      auto loc1 = getLocOrExit(project1, vma);
+      auto loc2 = getLocOrExit(project1, vma);
+      maybeSym1 = project1.programLoader->symtab.lookupByLocation(loc1);
+      maybeSym2 = project2.programLoader->symtab.lookupByLocation(loc2);
     } else {
       maybeSym1 = project1.programLoader->symtab.lookupByName(argv[i]);
       maybeSym2 = project2.programLoader->symtab.lookupByName(argv[i]);
