@@ -46,37 +46,54 @@ CPMAddPackage("gh:fmtlib/fmt#10.0.0")
 # could either specify a static or shared library.  Depending on either,
 # we need to correctly set the link mode before calling find_package.
 # Newer versions of Protobuf depend on Abseil.
-if(DEFINED Protobuf_LIBRARY)
-  if(Protobuf_LIBRARY MATCHES "\.a$")
-    set(Protobuf_USE_STATIC_LIBS ON)
-  else()
-    set(Protobuf_USE_STATIC_LIBS OFF)
-  endif()
-else()
-  set(Protobuf_USE_STATIC_LIBS ON)   # Use static libs by default
-endif()
+set(Protobuf_USE_STATIC_LIBS ON)
 
-include(FindProtobuf)
-find_package(Protobuf REQUIRED)
+find_package(protobuf CONFIG)
+if(NOT protobuf_FOUND)        # Legacy protobuf support
+  message(STATUS "Trying legacy method of finding protobuf")
+  set(protobuf_MODULE_COMPATIBLE ON)
+  include(FindProtobuf)
+  find_package(Protobuf REQUIRED)
+endif()
 include_directories(${Protobuf_INCLUDE_DIRS})
 
 # Generate Protobuf files
 # This is provided by FindProtobuf.cmake
-file(GLOB PROTO_FILES "${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto")
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
+set(PROTO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/proto")
+file(GLOB PROTO_FILES "${PROTO_DIR}/*.proto")
+if(protobuf_MODULE_COMPATIBLE)
+  protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
+endif()
 
 # ppc2cpp core #################################################################
 
 file(GLOB_RECURSE ppc2cpp_core_SRC "src/*.cpp")
-add_library(ppc2cpp_core ${ppc2cpp_core_SRC} ${PROTO_SRCS} ${PROTO_HDRS} )
-target_include_directories(ppc2cpp_core PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>  # <prefix>/include
-  ${YAML_CPP_SOURCE_DIR}/include
-  # protobuf_generate_cpp drops .pb.{h.c} files here.
-  ${CMAKE_CURRENT_BINARY_DIR}
-)
-target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${Protobuf_LIBRARIES} yaml-cpp)
+
+if(protobuf_MODULE_COMPATIBLE)
+  add_library(ppc2cpp_core ${ppc2cpp_core_SRC} ${PROTO_SRCS} ${PROTO_HDRS} )
+  target_include_directories(ppc2cpp_core PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>  # <prefix>/include
+    ${YAML_CPP_SOURCE_DIR}/include
+    # protobuf_generate_cpp drops .pb.{h.c} files here.
+    ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${Protobuf_LIBRARIES} yaml-cpp)
+else()
+  add_library(ppc2cpp_core ${ppc2cpp_core_SRC} ${PROTO_FILES})
+  target_include_directories(ppc2cpp_core PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>  # <prefix>/include
+    ${YAML_CPP_SOURCE_DIR}/include
+    # protobuf_generate_cpp drops .pb.{h.c} files here.
+    ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt protobuf::libprotobuf yaml-cpp)
+  protobuf_generate(
+    TARGET ppc2cpp_core
+    IMPORT_DIRS "${PROTO_DIR}"
+  )
+endif()
 
 # ppc2cpp CLI  #################################################################
 
