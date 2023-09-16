@@ -1,0 +1,49 @@
+# Build and push artifacts
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install LLVM
+      run: choco install -y llvm
+      if: runner.os == 'Windows'
+
+    - name: windows vcpkg shit
+      # https://vcpkg.io/en/getting-started.html
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git
+        ./vcpkg/bootstrap-vcpkg.sh
+        vcpkg install protobuf protobuf:x64-windows
+        vcpkg owns protobuf
+        ls vcpkg/scripts/buildsystems/vcpkg.cmake
+    - name: CMake generate
+      env:
+        ARTIFACT_NAME: ppc2cpp-${{ runner.os }}
+        WINDOWS_FLAGS: -S . -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_GENERATOR_PLATFORM=x64
+      run: |
+        echo $WINDOWS_FLAGS
+        cmake --version
+        cmake -B build \
+          -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTING=OFF \
+          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang
+          $WINDOWS_FLAGS
+      shell: bash
+    - name: Build
+      run: cmake --build build --target install -j
+    
+    - uses: actions/upload-artifact@v3
+      if: github.ref == 'refs/heads/main' && github.repository == 'em-eight/ppc2cpp'
+      with:
+        name: ppc2cpp-${{ runner.os }}
+        path: ppc2cpp-${{ runner.os }}
