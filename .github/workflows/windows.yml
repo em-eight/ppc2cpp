@@ -15,31 +15,40 @@ jobs:
 
     - name: Install LLVM
       run: choco install -y llvm
-      if: runner.os == 'Windows'
+    - name: Install Ninja
+      run: choco install -y ninja
 
-    - name: windows vcpkg shit
-      # https://vcpkg.io/en/getting-started.html
+    - name: Download protobuf
       run: |
-        git clone https://github.com/Microsoft/vcpkg.git
-        ./vcpkg/bootstrap-vcpkg.sh
-        vcpkg install protobuf protobuf:x64-windows
-        vcpkg owns protobuf
-        ls vcpkg/scripts/buildsystems/vcpkg.cmake
+        Invoke-WebRequest "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-win64.zip" -OutFile protoc_x64-windows.zip
+        mkdir protoc_x64-windows
+        7z x protoc_x64-windows.zip -oprotoc_x64-windows
+        dir
+        Invoke-WebRequest "https://www.dropbox.com/scl/fi/te9p80zrzcwgswrkw21en/protobuf_x64-windows.zip?rlkey=btmzjokhh256xxns348o3re7m&dl=1" -OutFile protobuf_x64-windows.zip
+        7z x protobuf_x64-windows.zip
+        dir
+
     - name: CMake generate
+      shell: bash
       env:
         ARTIFACT_NAME: ppc2cpp-${{ runner.os }}
       run: |
-        echo $WINDOWS_FLAGS
-        cmake --version
-        cmake -B build \
+        cmake -S . -B build -GNinja \
           -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=OFF \
           -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-          -S . -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_GENERATOR_PLATFORM=x64
-      shell: bash
+          -DEXTERNAL_LIBPROTOBUF_PATH=protobuf_x64-windows \
+          -DEXTERNAL_PROTOC_PATH=protoc_x64-windows
     - name: Build
-      run: cmake --build build --target install -j
+      shell: bash
+      env:
+        ARTIFACT_NAME: ppc2cpp-${{ runner.os }}
+      run: |
+        cmake --build build --target install --parallel --verbose
+        ls -lh $ARTIFACT_NAME
+        ls -lh $ARTIFACT_NAME/bin
+        ls -lh $ARTIFACT_NAME/lib
     
     - uses: actions/upload-artifact@v3
       if: github.ref == 'refs/heads/main' && github.repository == 'em-eight/ppc2cpp'
