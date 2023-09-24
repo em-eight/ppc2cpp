@@ -4,8 +4,6 @@ project(ppc2cpp VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 
-# Dependency sadness ###########################################################
-
 # CPM fetches and builds external dependencies
 include(cmake/CPM.cmake)
 
@@ -14,7 +12,6 @@ CPMAddPackage("gh:em-eight/ninutils#81b4910")
 # ELF binary parser
 CPMAddPackage("gh:serge1/ELFIO#8ae6cec")
 # disassebler
-#CPMAddPackage("gh:em-eight/ppcdisasm-cpp#4e2c2e1")
 CPMAddPackage(
   NAME ppcdisasm-cpp
   OPTIONS "BUILD_TESTING OFF"
@@ -35,17 +32,6 @@ CPMAddPackage(
 # {fmt}
 CPMAddPackage("gh:fmtlib/fmt#10.0.0")
 
-# Import Protobuf
-#
-# There is a lot of pain behind this.
-# The Protobuf repo itself and CMake provide their own ways
-# to locate the library in CMake.  We are using FindProtobuf.cmake
-# which is part of CMake since version 3.9.
-
-# If the Protobuf_LIBRARY workaround is used (see README), the user
-# could either specify a static or shared library.  Depending on either,
-# we need to correctly set the link mode before calling find_package.
-# Newer versions of Protobuf depend on Abseil.
 set(Protobuf_USE_STATIC_LIBS ON)
 
 find_package(protobuf CONFIG)
@@ -55,10 +41,8 @@ if(NOT protobuf_FOUND)        # Legacy protobuf support
   include(FindProtobuf)
   find_package(Protobuf REQUIRED)
 endif()
-include_directories(${Protobuf_INCLUDE_DIRS})
 
 # Generate Protobuf files
-# This is provided by FindProtobuf.cmake
 set(PROTO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/proto")
 file(GLOB PROTO_FILES "${PROTO_DIR}/*.proto")
 if(protobuf_MODULE_COMPATIBLE)
@@ -77,6 +61,7 @@ if(protobuf_MODULE_COMPATIBLE)
     ${YAML_CPP_SOURCE_DIR}/include
     # protobuf_generate_cpp drops .pb.{h.c} files here.
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${PROTOBUF_INCLUDE_DIRS}
   )
   target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${Protobuf_LIBRARIES} yaml-cpp)
 else()
