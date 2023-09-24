@@ -13,7 +13,7 @@
 namespace ppc2cpp {
 NinProgramLoader::NinProgramLoader(const std::vector<std::filesystem::path>& binaryPaths) {
   for (const auto& binaryPath : binaryPaths) {
-    std::string filename = binaryPath.filename();
+    std::string filename = binaryPath.filename().string();
     std::ifstream fstream(binaryPath, std::ios::binary | std::ios::in);
     if (!fstream.is_open()) throw std::runtime_error("Input file " + binaryPath.string() + " was not found");
     std::stringstream sstream;

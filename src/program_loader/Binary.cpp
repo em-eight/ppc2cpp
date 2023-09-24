@@ -7,7 +7,7 @@
 namespace ppc2cpp {
 Binary::Binary(std::filesystem::path binaryPath) {
   this->filepath = binaryPath;
-  this->name = binaryPath.filename();
+  this->name = binaryPath.filename().string();
 
   std::ifstream fstream(binaryPath, std::ios::binary | std::ios::in);
   if (!fstream.is_open()) throw std::runtime_error("Input file " + binaryPath.string() + " was not found");
@@ -27,7 +27,7 @@ std::optional<BinaryLocation> Binary::resolveVMA(uint32_t vma) {
 }
 
 void Binary::toProto(persistence::ProgramLoaderBinary* binaryProto) const {
-  binaryProto->set_filepath(this->filepath);
+  binaryProto->set_filepath(this->filepath.string());
   binaryProto->set_data(this->data);
 }
 }

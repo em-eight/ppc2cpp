@@ -54,7 +54,7 @@ void cli_create(int argc, char** argv) {
     print_create_usage(5);
   }
   if (options.projectName.size() == 0) {
-    options.projectName = options.projectFile.stem();
+    options.projectName = options.projectFile.stem().string();
   }
   if (options.inputFiles.size() == 0) {
     print_create_usage(6);
