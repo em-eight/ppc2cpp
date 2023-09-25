@@ -37,7 +37,6 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=OFF \
-          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
           -DEXTERNAL_LIBPROTOBUF_PATH=protobuf_x64-windows \
           -DEXTERNAL_PROTOC_PATH=protoc_x64-windows
     - name: Build
