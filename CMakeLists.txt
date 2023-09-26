@@ -34,40 +34,12 @@ CPMAddPackage("gh:fmtlib/fmt#10.0.0")
 
 set(Protobuf_USE_STATIC_LIBS ON)
 
-if(DEFINED EXTERNAL_LIBPROTOBUF_PATH AND DEFINED EXTERNAL_PROTOC_PATH)
-  # In case protobuf location is defined externally (Windows/CI hack)
-  find_package(Protobuf)  # fails but defines protobuf_generate_cpp lmaoooo
-  cmake_path(SET Protobuf_LIBRARIES ${EXTERNAL_LIBPROTOBUF_PATH}/lib/libprotobuf.lib)
-  cmake_path(SET PROTOBUF_INCLUDE_DIRS ${EXTERNAL_LIBPROTOBUF_PATH}/include)
-  cmake_path(SET Protobuf_PROTOC_EXECUTABLE ${EXTERNAL_PROTOC_PATH}/bin/protoc.exe)
-
-  get_filename_component(ABSOLUTE_PROTOC_EXE ${Protobuf_PROTOC_EXECUTABLE} ABSOLUTE)
-  message(STATUS ${ABSOLUTE_PROTOC_EXE})
-  set(Protobuf_PROTOC_EXECUTABLE ${ABSOLUTE_PROTOC_EXE})
-  
-  get_filename_component(ABSOLUTE_PROTOBUF_INCLUDE ${PROTOBUF_INCLUDE_DIRS} ABSOLUTE)
-  message(STATUS ${ABSOLUTE_PROTOBUF_INCLUDE})
-  set(PROTOBUF_INCLUDE_DIRS ${ABSOLUTE_PROTOBUF_INCLUDE})
-
-  get_filename_component(ABSOLUTE_PROTOBUF_LIB ${Protobuf_LIBRARIES} ABSOLUTE)
-  message(STATUS ${ABSOLUTE_PROTOBUF_LIB})
-  set(Protobuf_LIBRARY ${ABSOLUTE_PROTOBUF_LIB})
-
-  add_executable(protobuf::protoc IMPORTED)
-  set_target_properties(protobuf::protoc PROPERTIES IMPORTED_LOCATION "${Protobuf_PROTOC_EXECUTABLE}")
-
-  add_library(protobuf::libprotobuf STATIC IMPORTED)
-  set_target_properties(protobuf::libprotobuf PROPERTIES IMPORTED_LOCATION "${Protobuf_LIBRARY}")
-
+find_package(protobuf CONFIG)
+if(NOT protobuf_FOUND)        # Legacy protobuf support
+  message(STATUS "Trying legacy method of finding protobuf")
   set(protobuf_MODULE_COMPATIBLE ON)
-else()
-  find_package(protobuf CONFIG)
-  if(NOT protobuf_FOUND)        # Legacy protobuf support
-    message(STATUS "Trying legacy method of finding protobuf")
-    set(protobuf_MODULE_COMPATIBLE ON)
-    include(FindProtobuf)
-    find_package(Protobuf REQUIRED)
-  endif()
+  include(FindProtobuf)
+  find_package(Protobuf REQUIRED)
 endif()
 
 # Generate Protobuf files
@@ -91,7 +63,7 @@ if(protobuf_MODULE_COMPATIBLE)
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PROTOBUF_INCLUDE_DIRS}
   )
-  target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt protobuf::libprotobuf yaml-cpp)
+  target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${PROTOBUF_LIBRARIES} yaml-cpp)
   get_target_property(OUT ppc2cpp_core LINK_LIBRARIES)
   message(STATUS ${OUT})
 else()

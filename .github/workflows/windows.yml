@@ -20,10 +20,6 @@ jobs:
 
     - name: Download protobuf
       run: |
-        Invoke-WebRequest "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-win64.zip" -OutFile protoc_x64-windows.zip
-        mkdir protoc_x64-windows
-        7z x protoc_x64-windows.zip -oprotoc_x64-windows
-        dir
         Invoke-WebRequest "https://www.dropbox.com/scl/fi/te9p80zrzcwgswrkw21en/protobuf_x64-windows.zip?rlkey=btmzjokhh256xxns348o3re7m&dl=1" -OutFile protobuf_x64-windows.zip
         7z x protobuf_x64-windows.zip
         dir
@@ -37,8 +33,8 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=OFF \
-          -DEXTERNAL_LIBPROTOBUF_PATH=protobuf_x64-windows \
-          -DEXTERNAL_PROTOC_PATH=protoc_x64-windows
+          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_PREFIX_PATH=protobuf_x64-windows
     - name: Build
       shell: bash
       env:
