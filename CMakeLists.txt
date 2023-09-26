@@ -33,6 +33,7 @@ CPMAddPackage(
 CPMAddPackage("gh:fmtlib/fmt#10.0.0")
 
 set(Protobuf_USE_STATIC_LIBS ON)
+set(VCPKG_LIBRARY_LINKAGE static) # for vcpkg
 
 find_package(protobuf CONFIG)
 if(NOT protobuf_FOUND)        # Legacy protobuf support
