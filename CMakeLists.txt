@@ -63,7 +63,7 @@ if(protobuf_MODULE_COMPATIBLE)
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PROTOBUF_INCLUDE_DIRS}
   )
-  target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt ${PROTOBUF_LIBRARIES} yaml-cpp)
+  target_link_libraries(ppc2cpp_core dolrel ppcdisasm elfio fmt ${PROTOBUF_LIBRARIES} yaml-cpp)
   get_target_property(OUT ppc2cpp_core LINK_LIBRARIES)
   message(STATUS ${OUT})
 else()
@@ -75,7 +75,7 @@ else()
     # protobuf_generate_cpp drops .pb.{h.c} files here.
     ${CMAKE_CURRENT_BINARY_DIR}
   )
-  target_link_libraries(ppc2cpp_core PUBLIC dolrel ppcdisasm elfio fmt protobuf::libprotobuf yaml-cpp)
+  target_link_libraries(ppc2cpp_core dolrel ppcdisasm elfio fmt protobuf::libprotobuf yaml-cpp)
   protobuf_generate(
     TARGET ppc2cpp_core
     IMPORT_DIRS "${PROTO_DIR}"
