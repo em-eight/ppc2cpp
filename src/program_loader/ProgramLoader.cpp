@@ -41,6 +41,14 @@ std::optional<ProgramLocation> ProgramLoader::getLocation(const std::string& bin
 std::optional<uint8_t*> ProgramLoader::getBufferAtLocation(const ProgramLocation& location) {
   return binaries[location.binary_idx]->getBufferAtLocation(location);
 }
+
+std::optional<uint32_t> ProgramLoader::getLocationVMA(const ProgramLocation& location) {
+  auto maybeAddress = binaries[location.binary_idx]->sections[location.section_idx]->getAddress();
+  if (maybeAddress) {
+    return maybeAddress.value() + location.section_offset;
+  }
+  else return std::nullopt;
+}
   
 std::optional<ProgramLocation> ProgramLoader::resolveVMA(uint32_t vma) {
   for (int i = 0; i < binaries.size(); i++) {
@@ -67,10 +75,10 @@ std::optional<ProgramLocation> ProgramLoader::resolveTarget(const ProgramLocatio
     // 3. Lookup location relative to pc
     const auto& section = binaries[pc.binary_idx]->sections[pc.section_idx];
     int32_t targetOff = pc.section_offset + value;
-    if (targetOff < 0 || section->length <= targetOff) return std::nullopt;
-    else return pc + value;
-  }
+    if (targetOff >= 0 && targetOff < section->length) return pc + value;
 
+    return std::nullopt;
+  }
 }
 
 void ProgramLoader::toProto(persistence::ProgramLoader* loaderProto) const {

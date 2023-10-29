@@ -176,6 +176,9 @@ void cli_checkflow(int argc, char** argv) {
 
   ProgramComparator programComparator(project1.programLoader, project2.programLoader);
   for (int i = 4; i < argc; i++) {
+#ifndef NDEBUG
+    std::cout << "Name: " << argv[i] << std::endl;
+#endif
     std::optional<Symbol> maybeSym1, maybeSym2;
     if (uint32_t vma = std::atol(argv[i])) {
       auto loc1 = getLocOrExit(project1, vma);

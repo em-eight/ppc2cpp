@@ -19,7 +19,7 @@ class BasicBlock {
 public:
   // Offset from function start. The branch target of the previous block
   uint32_t start;
-  // Offset from function start. The address of the function that branches to another basic block
+  // Offset from function start. The instruction of the function that branches to another basic block
   uint32_t end;
   // block type. start and end are only valid for INTERNAL BlockType
   BlockType blockType;
@@ -54,7 +54,7 @@ public:
   // finds the index of the block an instruction belongs to
   int32_t findBlockByInsnIdx(uint32_t idx) const {
     for (uint32_t i = 0; i < blocks.size(); i++) {
-      if (blocks[i].start <= idx && idx < blocks[i].end) return i;
+      if (blocks[i].start <= idx && idx <= blocks[i].end) return i;
     }
     return -1;
   }

@@ -31,7 +31,6 @@ void ControlFlowAnalysis::functionCFA(Function& func, uint32_t blockIdx) {
         if (maybeNewBlock >= 0) functionCFA(func, maybeNewBlock);
         func.cfg.blocks[blockIdx].endsInCall = true;
       } else if (pc+1 == func.length() && func.cfg.hasExternalSuccessor(blockIdx)) { // tail call
-        assert(isBranchConditionUnconditional(insn) && "Tail call with conditional branch? wtf");
         func.cfg.blocks[blockIdx].endsInCall = true;
         func.cfg.blocks[blockIdx].endsInTailCall = true;
         func.cfg.blocks[blockIdx].isExit = true;

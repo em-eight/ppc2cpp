@@ -16,6 +16,13 @@ std::optional<Relocation> RelocationTable::lookupBySource(const ProgramLocation&
   else return std::nullopt;
 }
 
+std::optional<Relocation> RelocationTable::lookupByInsnLoc(const ProgramLocation& loc) const {
+  auto maybeReloc = this->lookupBySource(loc);
+  // LO HA and HI relocations are applied to the latter half part of the instruction
+  if (!maybeReloc) return this->lookupBySource(loc + 2);
+  return maybeReloc;
+}
+
 void RelocationTable::toProto(persistence::RelocTable* reloctabProto) const {
   for (const auto& reloc : relocs) {
     reloc.toProto(reloctabProto->add_relocs());

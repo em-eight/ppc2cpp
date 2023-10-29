@@ -1,5 +1,6 @@
 
 #include "ppcdisasm/ppc-dis.hpp"
+#include "ppcdisasm/ppc-relocations.h"
 
 #include "ppc2cpp/common/endian.h"
 #include "ppc2cpp/common/insn_properties.h"
@@ -67,13 +68,34 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
     std::cout << "\n";
 #endif
 
+    // lookup references
+    std::optional<Relocation> maybeReloc = programLoader->reloctab.lookupByInsnLoc(func.location + 4*pc);
+    // sometimes there are no relocs but REL_24 branches actually exist (TODO: Add analysis step beforehand?)
+    if (!maybeReloc && isBranchUncoditional(insn)) {
+      std::optional<ProgramLocation> branchLoc = programLoader->resolveTarget(func.location + 4*pc, branchValue(insn), isAbsolute(insn));
+      if (branchLoc && !func.contains(branchLoc.value())) {
+        maybeReloc.emplace(func.location + 4*pc, branchLoc.value(), R_PPC_REL24, 0);
+      }
+    }
+    if (maybeReloc) {
+      Relocation reloc = maybeReloc.value();
+#ifndef NDEBUG
+      std::cout << programLoader->locationString(reloc.source) << ", " << programLoader->locationString(reloc.destination) << '\n';
+#endif
+    }
+
     std::vector<VarNodePtr> insnInputs;
     std::vector<VarNodePtr> insnOutputs;
 
     const struct powerpc_opcode* opcode = lookup_powerpc(insn, dialect_raw);
-    InstructionUD insnUD = instructionUD(insn, opcode, dialect_raw);
+    InstructionUD insnUD = instructionUD(insn, opcode, dialect_raw, maybeReloc);
     const ppc_opindex_t *opindex; // index into powerpc_operands array
     const struct powerpc_operand *operand;
+
+    for (int i = 0; i < insnUD.refs.size(); i++) {
+      VarNodePtr opVar = std::make_shared<ReferenceNode>(pc, i, insnUD.refs[i]);
+      insnInputs.push_back(opVar);
+    }
 
     for (int i = 0; i < insnUD.imms.size(); i++) {
       VarNodePtr opVar = std::make_shared<ImmediateNode>(pc, i, insnUD.imms[i]);
@@ -118,11 +140,11 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
             //VarNodePtr opVar = std::make_shared<FunctionInputNode>(pc, registerInput);
             //insnInputs.push_back(opVar);
           } else if (opVars.size() == 1) {
-            insnInputs.insert(insnInputs.end(), opVars.begin(), opVars.end());
+            //insnInputs.insert(insnInputs.end(), opVars.begin(), opVars.end());
           } else { // multiple potential definitions from multiple basic blocks, create phi node
-            VarNodePtr opVar = std::make_shared<PhiNode>(pc, registerInput);
+            /*VarNodePtr opVar = std::make_shared<PhiNode>(pc, registerInput);
             opVar->inputs.insert(opVar->inputs.end(), opVars.begin(), opVars.end());
-            insnInputs.push_back(opVar);
+            insnInputs.push_back(opVar);*/
           }
         }
 
@@ -149,16 +171,17 @@ void DataFlowAnalysis::functionDFAImpl(Function& func) {
    
   // exit block return value detection
   if (func.cfg.blocks[blockIdx].isExit) {
+    int returnIdx = func.cfg.blocks[blockIdx].end;
     for (const CpuMemoryLocation& returnLoc : definedByCall) {
       const Definition& returnDef = flowContext.getDefinition(returnLoc);
       if (returnDef.size() == 1) {
-        ReturnNodePtr returnNode = std::make_shared<ReturnNode>(func.length(), returnLoc);
+        ReturnNodePtr returnNode = std::make_shared<ReturnNode>(returnIdx, returnLoc);
         returnNode->inputs.insert(returnNode->inputs.end(), returnDef.begin(), returnDef.end());
         blockSinks.push_back(returnNode);
       } else if (returnDef.size() > 1) { // multiple potential definitions from multiple basic blocks, create phi node
         VarNodePtr opVar = std::make_shared<PhiNode>(func.length(), returnLoc);
         opVar->inputs.insert(opVar->inputs.end(), returnDef.begin(), returnDef.end());
-        ReturnNodePtr returnNode = std::make_shared<ReturnNode>(func.length(), returnLoc);
+        ReturnNodePtr returnNode = std::make_shared<ReturnNode>(returnIdx, returnLoc);
         returnNode->inputs.push_back(opVar);
         blockSinks.push_back(returnNode);
       }

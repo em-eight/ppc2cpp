@@ -1,10 +1,11 @@
 
+#include "ppc2cpp/common/insn_properties.h"
+#include "ppc2cpp/data_flow/PpcInstructionUD.hpp"
+#include "ppc2cpp/data_flow/PpcOperandCats.h"
+
 #include "ppcdisasm/ppc-forms.h"
 #include "ppcdisasm/ppcps-forms.h"
 #include "ppcdisasm/ppc-operands.h"
-
-#include "ppc2cpp/common/insn_properties.h"
-#include "ppc2cpp/data_flow/PpcInstructionUD.hpp"
 
 using namespace ppcdisasm;
 
@@ -392,6 +393,14 @@ const std::unordered_set<uint64_t> setsCR1 {
  PPC_FORM_FSUBS_, 
 };
 
+std::unordered_set<uint64_t> canHaveRelocInsn {
+  PPC_FORM_ADDIS,
+  PPC_FORM_ADDI,
+  PPC_FORM_ADDIC,
+  PPC_FORM_ADDIC_,
+  PPC_FORM_ORI
+};
+
 std::unordered_set<uint64_t> nonStoreInsn;
 std::unordered_set<uint64_t> supportedInsn;
 void initInstructionUD() {
@@ -404,6 +413,10 @@ void initInstructionUD() {
   supportedInsn.insert(nonStoreInsn.begin(), nonStoreInsn.end());
   supportedInsn.insert(storeInsn.begin(), storeInsn.end());
   supportedInsn.insert(branchInsn.begin(), branchInsn.end());
+
+  // load/store instruction can use relocs
+  canHaveRelocInsn.insert(loadInsn.begin(), loadInsn.end());
+  canHaveRelocInsn.insert(storeInsn.begin(), storeInsn.end());
 }
 
 void appendCRRegister(std::vector<CpuMemoryLocation>& ops, int64_t reg) {
@@ -448,12 +461,16 @@ void appendOperands(std::vector<CpuMemoryLocation>& ops, const struct powerpc_op
   }
 }
 
-void handleBranchUD(InstructionUD& insnUD, uint32_t insn, ppc_cpu_t dialect) {
+void handleBranchUD(InstructionUD& insnUD, uint32_t insn, ppc_cpu_t dialect, std::optional<Relocation> maybeReloc) {
   if (isBranchUncoditional(insn)) {
-    int64_t value = operand_value_powerpc (LI, insn, dialect);
-    insnUD.imms.push_back(value);
-    int64_t isAbs = isAbsolute(insn) ? 1 : 0;
-    insnUD.imms.push_back(isAbs);
+    if (maybeReloc.has_value()) {
+      insnUD.refs.push_back(maybeReloc.value());
+    } else {
+      int64_t value = operand_value_powerpc (LI, insn, dialect);
+      insnUD.imms.push_back(value);
+      int64_t isAbs = isAbsolute(insn) ? 1 : 0;
+      insnUD.imms.push_back(isAbs);
+    }
   } else {
     // BO field dictates use-define
     int64_t bo = operand_value_powerpc (BO, insn, dialect);
@@ -490,10 +507,14 @@ void handleBranchUD(InstructionUD& insnUD, uint32_t insn, ppc_cpu_t dialect) {
     } else throw std::runtime_error("Could not decode conditional branch BO field " + std::to_string(bo));
 
     if (isBranchConditional(insn)) {
-      int64_t value = operand_value_powerpc (BD, insn, dialect);
-      insnUD.imms.push_back(value);
-      int64_t isAbs = isAbsolute(insn) ? 1 : 0;
-      insnUD.imms.push_back(isAbs);
+      if (maybeReloc.has_value()) {
+        insnUD.refs.push_back(maybeReloc.value());
+      } else {
+        int64_t value = operand_value_powerpc (BD, insn, dialect);
+        insnUD.imms.push_back(value);
+        int64_t isAbs = isAbsolute(insn) ? 1 : 0;
+        insnUD.imms.push_back(isAbs);
+      }
     } else if (isBranchToLR(insn)) {
       insnUD.inputs.push_back({CpuMemorySpace::MEM_SPACE_SPR, SPR_VALUE_LR});
     } else if (isBranchToCTR(insn)) {
@@ -505,7 +526,7 @@ void handleBranchUD(InstructionUD& insnUD, uint32_t insn, ppc_cpu_t dialect) {
   }
 }
 
-InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, ppc_cpu_t dialect) {
+InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, ppc_cpu_t dialect, std::optional<Relocation> maybeReloc) {
   if (!supportedInsn.contains(opcode->opcode)) {
     throw std::runtime_error("Unsupported instruction " + std::string(opcode->name));
   }
@@ -513,7 +534,7 @@ InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, 
   InstructionUD insnUD;
 
   if (isBranch(insn)) {
-    handleBranchUD(insnUD, insn, dialect);
+    handleBranchUD(insnUD, insn, dialect, maybeReloc);
     return insnUD;
   }
 
@@ -538,7 +559,12 @@ InstructionUD instructionUD(uint32_t insn, const struct powerpc_opcode* opcode, 
       }
       registerInputCount++;
     } else if (isImmediate(operand->flags, value)) { // immediate input
-      insnUD.imms.push_back(value);
+      if (canHaveRelocInsn.contains(opcode->opcode) && maybeReloc.has_value()) {
+        Relocation reloc = maybeReloc.value();
+        insnUD.refs.push_back(maybeReloc.value());
+      } else {
+        insnUD.imms.push_back(value);
+      }
     } else if (isIgnore(operand->flags)) { // ignore
     } else {
       throw std::runtime_error("unsupported operand, instruction " + std::string(opcode->name) + " operand index " + std::to_string(operand_idx));

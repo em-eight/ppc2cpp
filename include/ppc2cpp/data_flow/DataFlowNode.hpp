@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "ppc2cpp/model/CpuMemory.hpp"
+#include "ppc2cpp/model/Relocation.hpp"
 
 namespace ppc2cpp {
 class VarNode;
@@ -88,6 +89,17 @@ public:
   ImmediateNode(uint32_t index, uint32_t opindex, int64_t value) : OperandNode(index, opindex), value(value) {}
 };
 typedef std::shared_ptr<ImmediateNode> ImmediateNodePtr;
+
+/**
+ * Varnode that represents a symbol reference
+*/
+class ReferenceNode : public OperandNode {
+public:
+  Relocation reloc;
+
+  ReferenceNode(uint32_t index, uint32_t opindex, Relocation reloc) : OperandNode(index, opindex), reloc(reloc) {}
+};
+typedef std::shared_ptr<ReferenceNode> ReferenceNodePtr;
 
 /**
  * Varnode that is returned by a called function

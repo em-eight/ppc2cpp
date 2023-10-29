@@ -31,6 +31,11 @@ std::string getDotLabel(const ProgramLoaderPtr& programLoader, const Function& f
       return opcode->name;
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
       return std::to_string(imm->value);
+    } else if (ReferenceNodePtr ref = dynamic_pointer_cast<ReferenceNode>(var)) {
+      std::optional<Symbol> maybeRelocSym = programLoader->symtab.lookupByLocation(ref->reloc.destination);
+      if (!maybeRelocSym) throw std::runtime_error("Could not resolve reference at " + 
+        programLoader->locationString(ref->reloc.source) + " to " + programLoader->locationString(ref->reloc.destination));
+      return maybeRelocSym.value().name;
     } else if (FunctionInputNodePtr registerVar = dynamic_pointer_cast<FunctionInputNode>(var)) {
       return cpuMemorySpace2label(registerVar->cpuMemoryLocation);
     } else if (PhiNodePtr phi = dynamic_pointer_cast<PhiNode>(var)) {
@@ -54,6 +59,8 @@ std::string getNodeId(const VarNodePtr& var) {
       return "phi_insn" + std::to_string(phiIn->index) + "op" + std::to_string(phiIn->index);
     } else if (ImmediateNodePtr imm = dynamic_pointer_cast<ImmediateNode>(var)) {
       return "imm_insn" + std::to_string(imm->index) + "op" + std::to_string(imm->index);
+    } else if (ReferenceNodePtr ref = dynamic_pointer_cast<ReferenceNode>(var)) {
+      return "ref_insn" + std::to_string(ref->index) + "op" + std::to_string(ref->index);
     } else if (FunctionInputNodePtr registerVar = dynamic_pointer_cast<FunctionInputNode>(var)) {
       return "funcinput_insn" + std::to_string(registerVar->index) + cpuMemorySpace2label(registerVar->cpuMemoryLocation);
     } else if (PhiNodePtr phiVar = dynamic_pointer_cast<PhiNode>(var)) {

@@ -31,6 +31,11 @@ bool ProgramComparator::compareVarNodes(const Function& func1, const Function& f
     return false;
   }
 
+#ifndef NDEBUG
+      std::cout << "TYPE " << typeid(*var1).name() << " IDX " << dynamic_pointer_cast<DataFlowNode>(var1)->index <<
+        " IDX2 " << dynamic_pointer_cast<DataFlowNode>(var2)->index << '\n';
+#endif
+
   // TODO: cache calculation of whether two nodes are equivalent somehow
 
   if (dynamic_pointer_cast<SinkNode>(var1) || dynamic_pointer_cast<ResultNode>(var1)) {
@@ -66,6 +71,21 @@ bool ProgramComparator::compareVarNodes(const Function& func1, const Function& f
       std::cout << "Function input mismatch: " << cpuMemorySpace2label(n1->cpuMemoryLocation) << " != " << cpuMemorySpace2label(n2->cpuMemoryLocation) << "\n";
       return false;
     }
+  } else if (dynamic_pointer_cast<ImmediateNode>(var1)) {
+    ImmediateNodePtr n1 = dynamic_pointer_cast<ImmediateNode>(var1);
+    ImmediateNodePtr n2 = dynamic_pointer_cast<ImmediateNode>(var2);
+
+    if (n1->value != n2->value) {
+      std::cout << "Immediate value mismatch: " << n1->value << " != " << n2->value << "\n";
+      return false;
+    }
+  } else if (dynamic_pointer_cast<ReferenceNode>(var1)) {
+    ReferenceNodePtr n1 = dynamic_pointer_cast<ReferenceNode>(var1);
+    ReferenceNodePtr n2 = dynamic_pointer_cast<ReferenceNode>(var2);
+
+    if (!compareRelocations(n1->reloc, n2->reloc, func1.name, -1)) {
+      return false;
+    }
   } else if (dynamic_pointer_cast<PhiNode>(var1)) {
     // no checks for now
   } else if (dynamic_pointer_cast<CallReturnNode>(var1)) {
@@ -78,7 +98,12 @@ bool ProgramComparator::compareVarNodes(const Function& func1, const Function& f
       return false;
     }
 
-    if (!compareVarNodes(func1, func2, var1->inputs[inputIdx], var2->inputs[inputIdx])) return false;
+    if (!compareVarNodes(func1, func2, var1->inputs[inputIdx], var2->inputs[inputIdx])) {
+#ifndef NDEBUG
+      std::cout << "Nonmatching child at index " << inputIdx << std::endl;
+#endif
+      return false;
+    }
   }
   if (var2->inputs.size() > var1->inputs.size()) {
     std::cout << "Expected existence of input " << var1->inputs.size() << " in first variable" << "\n";
@@ -126,15 +151,21 @@ bool ProgramComparator::compareFunctionFlows(const Function& func1, const Functi
 
     for (int sinkIdx = 0; sinkIdx < sinks1.size(); sinkIdx++) {
       if (sinkIdx >= sinks2.size()) {
-        std::cout << "Expected existence of sink " + std::to_string(bblockIdx) + " in second function" << "\n";
+        std::cout << "Expected existence of sink " + std::to_string(sinkIdx) + " in second function" << "\n";
         return false;
       }
 
       const SinkNodePtr& sink1 = sinks1[sinkIdx];
       const SinkNodePtr& sink2 = sinks2[sinkIdx];
+
+      if (!compareVarNodes(func1, func2, sink1, sink2)) {
+        std::cout << "Sinks at index " + std::to_string(sinkIdx) + " of block " + std::to_string(bblockIdx) + " did not match" << "\n";
+        return false;
+      }
     }
+
     if (sinks2.size() > sinks1.size()) {
-      std::cout << "Expected existence of sink " + std::to_string(bblockIdx) + " in first function" << "\n";
+      std::cout << "Expected existence of sink " + std::to_string(sinks1.size()) + " in first function" << "\n";
       return false;
     }
 
@@ -171,10 +202,16 @@ bool ProgramComparator::compareRelocations(const Relocation& reloc1, const Reloc
   std::optional<Symbol> maybeRelocSym1 = pLoader1->symtab.lookupByLocation(reloc1.destination);
   std::optional<Symbol> maybeRelocSym2 = pLoader2->symtab.lookupByLocation(reloc2.destination);
 
+
   ASSERT(maybeRelocSym1.has_value(), "Source: could not find symbol referenced by relocation at " + pLoader1->locationString(reloc1.source)
     + ", destination " + pLoader1->locationString(reloc1.destination));
   ASSERT(maybeRelocSym2.has_value(), "Target: could not find symbol referenced by relocation at " + pLoader2->locationString(reloc2.source)
     + ", destination " + pLoader2->locationString(reloc2.destination));
+
+  if (maybeRelocSym1->symbolBinding == SymbolBinding::LOCAL || maybeRelocSym2->symbolBinding == SymbolBinding::LOCAL) {
+    // for local symbols, recurse symbol equivalence because they are not contained in the symbols indexed by name
+    return compareSymbols(maybeRelocSym1.value(), maybeRelocSym2.value());
+  }
 
   // compare targets
   if (maybeRelocSym1->name != maybeRelocSym2->name) {
@@ -195,11 +232,6 @@ bool ProgramComparator::compareRelocations(const Relocation& reloc1, const Reloc
     std::cout << symName << "+" << fmt::format("0x{:x}", off) << ": Relocation referencing symbol " << maybeRelocSym2->name <<
       " has non-matching addend " << reloc1.addend << " != " << reloc2.addend << "\n";
     return false;
-  }
-
-  if (maybeRelocSym1->symbolBinding == SymbolBinding::LOCAL || maybeRelocSym2->symbolBinding == SymbolBinding::LOCAL) {
-    // for local symbols, also check recurse symbol equivalence because they are not contained in the symbols indexed by name
-    if (!compareSymbols(maybeRelocSym1.value(), maybeRelocSym2.value())) return false;
   }
 
   return true;
@@ -313,8 +345,8 @@ bool ProgramComparator::compareFunctions(const Symbol& sourceSym, const Symbol& 
   for (int off = 0; off < compareSize; off+=4) {
     ProgramLocation pos2 = sourceSym.location + off;
     ProgramLocation pos1 = targetSym.location + off;
-    std::optional<Relocation> maybeReloc2 = pLoader2->reloctab.lookupBySource(pos2);
-    std::optional<Relocation> maybeReloc1 = pLoader1->reloctab.lookupBySource(pos1);
+    std::optional<Relocation> maybeReloc2 = pLoader2->reloctab.lookupByInsnLoc(pos2);
+    std::optional<Relocation> maybeReloc1 = pLoader1->reloctab.lookupByInsnLoc(pos1);
 
     if (maybeReloc1.has_value() != maybeReloc2.has_value()) {
       std::cout << targetSym.name << "+" << fmt::format("0x{:x}", off) << ": not both programs have relocation, source: " <<

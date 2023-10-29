@@ -32,6 +32,7 @@ public:
   // get a location by binary name, section name and offset
   virtual std::optional<ProgramLocation> getLocation(const std::string& binaryName, const std::string& sectionName, uint32_t offset);
   virtual std::optional<uint8_t*> getBufferAtLocation(const ProgramLocation&);
+  virtual std::optional<uint32_t> getLocationVMA(const ProgramLocation&);
   std::string locationString(const ProgramLocation&) const;
   // If the given location refers to some other part of the program, return its location, else nullopt
   virtual std::optional<ProgramLocation> getReferenceAtLocation(const ProgramLocation&) = 0;

@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "relocs.pb.h"
+
 #include "ProgramLocation.hpp"
 
 namespace ppc2cpp {

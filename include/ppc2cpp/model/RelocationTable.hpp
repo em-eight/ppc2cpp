@@ -5,8 +5,6 @@
 #include <unordered_map>
 #include <optional>
 
-#include "relocs.pb.h"
-
 #include "Relocation.hpp"
 
 namespace ppc2cpp {
@@ -24,6 +22,7 @@ public:
   // prepares _source_index
   void constructSourceIndex();
   std::optional<Relocation> lookupBySource(const ProgramLocation& loc) const;
+  std::optional<Relocation> lookupByInsnLoc(const ProgramLocation& loc) const;
   void toProto(persistence::RelocTable* reloctabProto) const;
   static RelocationTable fromProto(const persistence::RelocTable* reloctabProto);
 };
