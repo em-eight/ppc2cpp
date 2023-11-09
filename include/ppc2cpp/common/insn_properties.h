@@ -39,7 +39,11 @@ inline bool isBranchUncoditional(uint32_t insn) {
 // Returns the LI field of an I form instruction
 inline int32_t branchValue(uint32_t insn) {
   int32_t addr_val = (insn >> 2) & 0xffffff;
-  return addr_val;
+  // Sign extend if the value is negative
+  if (addr_val & 0x00800000) {
+    addr_val |= 0xFF000000;
+  }
+  return addr_val * 4;
 }
 
 inline bool isBranchConditional(uint32_t insn) {
@@ -49,7 +53,11 @@ inline bool isBranchConditional(uint32_t insn) {
 
 // Returns the BD field of a B form instruction
 inline int32_t branchConditionalValue(uint32_t insn) {
-  int32_t addr_val = (insn >> 2) & 0x3fff;
+  int32_t addr_val = 0xfffc;
+  // Sign extend if the value is negative
+  if (addr_val & 0x00008000) {
+    addr_val |= 0xFFFF0000;
+  }
   return addr_val;
 }
 
