@@ -20,7 +20,10 @@ namespace ppc2cpp {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
 #endif
-bool ProgramComparator::compareVarNodes(const Function& func1, const Function& func2, const VarNodePtr& var1, const VarNodePtr& var2) {
+bool ProgramComparator::compareVarNodes(const Function& func1, const Function& func2, const VarNodePtr& var1, const VarNodePtr& var2, VarNodeComparisonCache& comparisonCache) {
+  auto cacheResult = comparisonCache.check(var1, var2);
+  if (cacheResult.has_value()) return cacheResult.value();
+
   ppc_cpu_t dialect = ppc_750cl_dialect;
 
   if (!dynamic_pointer_cast<DataFlowNode>(var1) || !dynamic_pointer_cast<DataFlowNode>(var2)) {
@@ -98,12 +101,13 @@ bool ProgramComparator::compareVarNodes(const Function& func1, const Function& f
       return false;
     }
 
-    if (!compareVarNodes(func1, func2, var1->inputs[inputIdx], var2->inputs[inputIdx])) {
+    if (!compareVarNodes(func1, func2, var1->inputs[inputIdx], var2->inputs[inputIdx], comparisonCache)) {
+      comparisonCache.set(var1, var2, false);
 #ifndef NDEBUG
       std::cout << "Nonmatching child at index " << inputIdx << std::endl;
 #endif
       return false;
-    }
+    } else comparisonCache.set(var1, var2, true);
   }
   if (var2->inputs.size() > var1->inputs.size()) {
     std::cout << "Expected existence of input " << var1->inputs.size() << " in first variable" << "\n";
@@ -138,6 +142,7 @@ bool ProgramComparator::compareFunctionFlows(const Function& func1, const Functi
 
   // TODO: More helpful non-equivalence messages, and in the "order of occurence" as much as possible.
   // Maybe come up with a system where the types of differences are aggregates and reported in an organized manner
+  VarNodeComparisonCache comparisonCache;
 
   // basic block equivalence checking
   for (int bblockIdx = 0; bblockIdx < cfg1.blocks.size(); bblockIdx++) {
@@ -158,7 +163,8 @@ bool ProgramComparator::compareFunctionFlows(const Function& func1, const Functi
       const SinkNodePtr& sink1 = sinks1[sinkIdx];
       const SinkNodePtr& sink2 = sinks2[sinkIdx];
 
-      if (!compareVarNodes(func1, func2, sink1, sink2)) {
+      if (!compareVarNodes(func1, func2, sink1, sink2, comparisonCache)) {
+        comparisonCache.set(sink1, sink2, true);
         std::cout << "Sinks at index " + std::to_string(sinkIdx) + " of block " + std::to_string(bblockIdx) + " did not match" << "\n";
         return false;
       }
